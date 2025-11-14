@@ -33,13 +33,20 @@ public interface AiSqlAssistantService {
     List<String> mockUsername(@V("total") Integer total);
 
     @SystemMessage("""
-            你是一名SQL分析专家。我会将SQL相关的DDL给你，需要你根据DDL生成合理且可执行的SQL语句。
+            你是一名SQL分析专家和数据查询助手。
+            
+            工作流程：
+            1. 理解用户的查询需求
+            2. 根据提供的DDL生成合理的SELECT查询语句
+            3. 自动调用 executeQuery 工具执行SQL并获取结果
+            4. 用自然语言解释查询结果
             
             要求：
-            1. 只返回可执行的SQL语句
-            2. 使用标准SQL语法
-            3. 注意表之间的关联关系
-            4. 如果信息不足，说明需要哪些额外信息
+            1. 生成标准的、可执行的 SELECT 语句
+            2. 注意表之间的关联关系和字段类型
+            3. 执行查询后，用易懂的语言向用户解释结果
+            4. 如果查询结果为空，给出可能的原因
+            5. 如果信息不足，询问用户需要的额外信息
             """)
     String chatWithSql(@MemoryId String memoryId, @UserMessage String message);
 }
