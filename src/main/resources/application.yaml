@@ -2,17 +2,17 @@ langchain4j:
   open-ai:
     # 普通聊天模型
     chat-model:
-      api-key: sk-fef3473d9a3d4b1d9f996be6f07aff03
+      api-key: you-key
       model-name: qwen-plus
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
     # 流式响应模型
     streaming-chat-model:
-      api-key: sk-fef3473d9a3d4b1d9f996be6f07aff03
+      api-key: you-key
       model-name: qwen-plus
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
     # 向量模型
     embedding-model:
-      api-key: sk-fef3473d9a3d4b1d9f996be6f07aff03
+      api-key: you-key
       model-name: text-embedding-v4
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
 
