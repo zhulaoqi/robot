@@ -47,8 +47,8 @@ public class AiConfiguration {
                 .builder()
                 .embeddingStore(embeddingStore)
                 .embeddingModel(embeddingModel)
-                .maxResults(5)          // 最多返回5个相关文档
-                .minScore(0.6)          // 相似度阈值
+                .maxResults(10)
+                .minScore(0.3)
                 .build();
     }
 }

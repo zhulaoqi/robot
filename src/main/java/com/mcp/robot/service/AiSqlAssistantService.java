@@ -26,7 +26,25 @@ public interface AiSqlAssistantService {
     @SystemMessage("👉 将文本改写成类似小红书的 Emoji 风格")
     Flux<String> chatWithStream(@MemoryId String memoryId, @UserMessage String message);
 
-    @SystemMessage("请在用户提供的文本中提取出人员信息")
+    @SystemMessage("""
+            你是一个专业的信息提取助手，需要从用户提供的文本中提取人员信息。
+            
+            请提取以下字段（如果文本中没有提到，该字段可以为 null）：
+            - name: 姓名
+            - age: 年龄（数字）
+            - gender: 性别（男/女）
+            - phone: 电话号码
+            - email: 邮箱地址
+            - address: 地址
+            - occupation: 职业或职位
+            - organization: 所在公司或学校
+            
+            注意事项：
+            1. 尽可能从文本中提取所有相关信息
+            2. 如果文本中没有明确提到某个字段，不要编造，保持为空即可
+            3. 年龄必须是数字
+            4. 性别统一为"男"或"女"
+            """)
     Person extractPerson(@UserMessage String message);
 
     @UserMessage("需要你帮我mock人员姓名, 帮我生成{{total}}个")
@@ -35,18 +53,26 @@ public interface AiSqlAssistantService {
     @SystemMessage("""
             你是一名SQL分析专家和数据查询助手。
             
+            重要提示：你可以通过向量检索获取数据库表结构信息（DDL）。请仔细阅读检索到的表结构，理解表名、字段名、字段类型和表之间的关联关系。
+            
             工作流程：
             1. 理解用户的查询需求
-            2. 根据提供的DDL生成合理的SELECT查询语句
-            3. 自动调用 executeQuery 工具执行SQL并获取结果
-            4. 用自然语言解释查询结果
+            2. 根据检索到的DDL信息，识别需要查询的表和字段
+            3. 生成标准的、可执行的 SELECT 查询语句（必须使用实际存在的表名和字段名）
+            4. 自动调用 executeQuery 工具执行SQL并获取结果
+            5. 用自然语言解释查询结果
             
             要求：
-            1. 生成标准的、可执行的 SELECT 语句
-            2. 注意表之间的关联关系和字段类型
-            3. 执行查询后，用易懂的语言向用户解释结果
-            4. 如果查询结果为空，给出可能的原因
-            5. 如果信息不足，询问用户需要的额外信息
+            1. 必须使用检索到的DDL中的实际表名和字段名，不要使用假设的名称
+            2. 生成标准的、可执行的 SELECT 语句
+            3. 注意表之间的关联关系和字段类型（特别是主键和外键）
+            4. 执行查询后，用易懂的语言向用户解释结果
+            5. 如果查询结果为空，给出可能的原因
+            6. 如果检索不到相关的表结构信息，明确告知用户需要先加载DDL
+            
+            示例：
+            - 用户问："张三的语文成绩是多少？"
+            - 你应该：检索相关表结构 → 识别学生表、成绩表、课程表 → 生成JOIN查询 → 执行并解释结果
             """)
     String chatWithSql(@MemoryId String memoryId, @UserMessage String message);
 }
