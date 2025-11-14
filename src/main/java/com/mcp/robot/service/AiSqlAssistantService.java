@@ -18,12 +18,8 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
  * @author Kinch.zhu
  * @date 2025/5/16
  */
-@AiService(wiringMode = EXPLICIT,
-        chatModel = "openAiChatModel",
-        streamingChatModel = "openAiStreamingChatModel",
-        chatMemoryProvider = "chatMemoryProvider",
-        contentRetriever = "contentRetriever",
-        tools = {"sysTools"})
+@AiService(wiringMode = EXPLICIT, chatModel = "openAiChatModel", streamingChatModel = "openAiStreamingChatModel", chatMemoryProvider = "chatMemoryProvider", contentRetriever = "contentRetriever", tools = {
+        "sysTools"})
 public interface AiSqlAssistantService {
     String chat(String message);
 
@@ -36,7 +32,14 @@ public interface AiSqlAssistantService {
     @UserMessage("需要你帮我mock人员姓名, 帮我生成{{total}}个")
     List<String> mockUsername(@V("total") Integer total);
 
-    @SystemMessage("你是一名sql分析专家 我会将sql相关的ddl给你, 需要你根据ddl生成合理且可执行的sql语句并返回")
+    @SystemMessage("""
+            你是一名SQL分析专家。我会将SQL相关的DDL给你，需要你根据DDL生成合理且可执行的SQL语句。
+            
+            要求：
+            1. 只返回可执行的SQL语句
+            2. 使用标准SQL语法
+            3. 注意表之间的关联关系
+            4. 如果信息不足，说明需要哪些额外信息
+            """)
     String chatWithSql(@MemoryId String memoryId, @UserMessage String message);
 }
-

@@ -5,7 +5,6 @@ import com.mcp.robot.service.AiSqlAssistantService;
 import com.mcp.robot.service.MysqlEmbeddingStore;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentSplitter;
-import dev.langchain4j.data.document.splitter.DocumentByRegexSplitter;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -21,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -157,8 +157,8 @@ public class AiServiceController {
         // 2. 构建搜索请求
         EmbeddingSearchRequest searchRequest = EmbeddingSearchRequest.builder()
                 .queryEmbedding(queryEmbedding.content())
-                .maxResults(5)
-                .minScore(0.5)
+                .maxResults(10)
+                .minScore(0.45)
                 .build();
 
         // 3. 执行向量检索
@@ -259,25 +259,36 @@ public class AiServiceController {
             // 2. 创建文档
             Document document = Document.from(sqlContent);
 
-            // 3. 使用分号分割 SQL（每条 SQL 语句作为一个片段）
-            DocumentSplitter splitter = new DocumentByRegexSplitter(
-                    ";",
-                    ";",
-                    2000,
+            // 3. 使用递归分割器
+            DocumentSplitter splitter = DocumentSplitters.recursive(
+                    800,
                     100
             );
 
             List<TextSegment> segments = splitter.split(document);
             log.info("📄 SQL 文档分割成 {} 个片段", segments.size());
 
-            // 4. 向量化
-            Response<List<Embedding>> embedResponse = embeddingModel.embedAll(segments);
-            List<Embedding> embeddings = embedResponse.content();
+            // 4. 分批向量化（每批最多10个）
+            int batchSize = 10;
+            List<Embedding> allEmbeddings = new ArrayList<>();
+
+            for (int i = 0; i < segments.size(); i += batchSize) {
+                int end = Math.min(i + batchSize, segments.size());
+                List<TextSegment> batch = segments.subList(i, end);
+
+                log.info("📊 处理第 {}/{} 批，片段数: {}",
+                        (i / batchSize + 1),
+                        (segments.size() + batchSize - 1) / batchSize,
+                        batch.size());
+
+                Response<List<Embedding>> embedResponse = embeddingModel.embedAll(batch);
+                allEmbeddings.addAll(embedResponse.content());
+            }
 
             // 5. 存入向量库
-            embeddingStore.addAll(embeddings, segments);
+            embeddingStore.addAll(allEmbeddings, segments);
 
-            log.info("✅ 成功加载学生成绩系统 DDL，共 {} 个向量", embeddings.size());
+            log.info("✅ 成功加载学生成绩系统 DDL，共 {} 个向量", allEmbeddings.size());
             return String.format("成功加载学生成绩系统 DDL，共 %d 个片段", segments.size());
 
         } catch (Exception e) {
