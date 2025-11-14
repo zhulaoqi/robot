@@ -9,7 +9,10 @@ import com.mcp.robot.mapper.KnowledgeEmbeddingMapper;
 import com.mcp.robot.model.KnowledgeEmbeddingEntity;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
-import dev.langchain4j.store.embedding.*;
+import dev.langchain4j.store.embedding.EmbeddingMatch;
+import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
+import dev.langchain4j.store.embedding.EmbeddingSearchResult;
+import dev.langchain4j.store.embedding.EmbeddingStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,7 +28,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
-    
+
     private final KnowledgeEmbeddingMapper knowledgeEmbeddingMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -84,15 +87,15 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
         if (embeddings == null || embeddings.isEmpty()) {
             return;
         }
-        
+
         for (int i = 0; i < embeddings.size(); i++) {
             String id = ids.get(i);
             Embedding embedding = embeddings.get(i);
             TextSegment segment = (embedded != null && i < embedded.size()) ? embedded.get(i) : null;
-            
+
             addInternal(id, embedding, segment);
         }
-        
+
         log.info("✅ 批量添加 {} 个向量到 MySQL", ids.size());
     }
 
@@ -101,36 +104,36 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
      */
     @Override
     public EmbeddingSearchResult<TextSegment> search(EmbeddingSearchRequest request) {
-        log.info("🔍 开始向量检索: maxResults={}, minScore={}", 
+        log.info("🔍 开始向量检索: maxResults={}, minScore={}",
                 request.maxResults(), request.minScore());
-        
+
         // 查询所有向量
         List<KnowledgeEmbeddingEntity> allEntities = knowledgeEmbeddingMapper.selectList(null);
         log.info("📊 数据库中共有 {} 个向量", allEntities.size());
-        
+
         if (allEntities.isEmpty()) {
             log.warn("⚠️ 向量库为空，请先添加知识");
             return new EmbeddingSearchResult<>(Collections.emptyList());
         }
-        
+
         // 计算相似度
         List<EmbeddingMatch<TextSegment>> matches = new ArrayList<>();
         Embedding queryEmbedding = request.queryEmbedding();
         List<Float> queryVector = queryEmbedding.vectorAsList();
         double minScore = request.minScore();
-        
+
         for (KnowledgeEmbeddingEntity entity : allEntities) {
             try {
                 List<Float> storedVector = jsonToVector(entity.getEmbeddingVector());
                 double similarity = cosineSimilarity(queryVector, storedVector);
-                
+
                 // 应用最小分数过滤
                 if (similarity >= minScore) {
                     TextSegment segment = TextSegment.from(
-                            entity.getContent(), 
+                            entity.getContent(),
                             jsonToMetadata(entity.getMetadataJson())
                     );
-                    
+
                     matches.add(new EmbeddingMatch<>(
                             similarity,
                             entity.getEmbeddingId(),
@@ -142,13 +145,13 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
                 log.error("❌ 处理向量失败: id={}", entity.getEmbeddingId(), e);
             }
         }
-        
+
         // 排序并限制结果数量
         matches.sort((a, b) -> Double.compare(b.score(), a.score()));
         List<EmbeddingMatch<TextSegment>> result = matches.stream()
                 .limit(request.maxResults())
                 .collect(Collectors.toList());
-        
+
         log.info("✅ 检索完成，返回 {} 个结果", result.size());
         return new EmbeddingSearchResult<>(result);
     }
@@ -160,7 +163,7 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
     public void remove(String id) {
         LambdaQueryWrapper<KnowledgeEmbeddingEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.eq(KnowledgeEmbeddingEntity::getEmbeddingId, id);
-        
+
         int deleted = knowledgeEmbeddingMapper.delete(wrapper);
         log.info("🗑️ 删除向量: id={}, deleted={}", id, deleted);
     }
@@ -173,10 +176,10 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
         if (ids == null || ids.isEmpty()) {
             return;
         }
-        
+
         LambdaQueryWrapper<KnowledgeEmbeddingEntity> wrapper = Wrappers.lambdaQuery();
         wrapper.in(KnowledgeEmbeddingEntity::getEmbeddingId, ids);
-        
+
         int deleted = knowledgeEmbeddingMapper.delete(wrapper);
         log.info("🗑️ 批量删除向量: count={}, deleted={}", ids.size(), deleted);
     }
@@ -202,7 +205,7 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
         entity.setEmbeddingVector(vectorToJson(embedding.vectorAsList()));
         entity.setMetadataJson(metadataToJson(textSegment));
         entity.setCreatedTime(LocalDateTime.now());
-        
+
         knowledgeEmbeddingMapper.insert(entity);
         log.debug("💾 添加向量: id={}, content length={}", id, entity.getContent().length());
     }
@@ -213,27 +216,27 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
     private double cosineSimilarity(List<Float> vector1, List<Float> vector2) {
         if (vector1.size() != vector2.size()) {
             throw new IllegalArgumentException(
-                String.format("向量维度不匹配: %d vs %d", vector1.size(), vector2.size())
+                    String.format("向量维度不匹配: %d vs %d", vector1.size(), vector2.size())
             );
         }
-        
+
         double dotProduct = 0.0;
         double norm1 = 0.0;
         double norm2 = 0.0;
-        
+
         for (int i = 0; i < vector1.size(); i++) {
             double v1 = vector1.get(i);
             double v2 = vector2.get(i);
-            
+
             dotProduct += v1 * v2;
             norm1 += v1 * v1;
             norm2 += v2 * v2;
         }
-        
+
         if (norm1 == 0.0 || norm2 == 0.0) {
             return 0.0;
         }
-        
+
         return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
     }
 
@@ -253,7 +256,8 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
      */
     private List<Float> jsonToVector(String json) {
         try {
-            return objectMapper.readValue(json, new TypeReference<List<Float>>() {});
+            return objectMapper.readValue(json, new TypeReference<List<Float>>() {
+            });
         } catch (JsonProcessingException e) {
             throw new RuntimeException("向量反序列化失败: " + json, e);
         }
@@ -282,7 +286,8 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
             return new dev.langchain4j.data.document.Metadata();
         }
         try {
-            Map<String, Object> map = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+            Map<String, Object> map = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {
+            });
             return dev.langchain4j.data.document.Metadata.from(map);
         } catch (JsonProcessingException e) {
             log.warn("元数据反序列化失败: {}", json, e);

@@ -5,6 +5,7 @@ import com.mcp.robot.service.AiSqlAssistantService;
 import com.mcp.robot.service.MysqlEmbeddingStore;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentSplitter;
+import dev.langchain4j.data.document.splitter.DocumentByRegexSplitter;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -15,9 +16,11 @@ import dev.langchain4j.store.embedding.EmbeddingSearchResult;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,7 +34,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/ai/chat")
 @RequiredArgsConstructor
 public class AiServiceController {
-    
+
     private final EmbeddingModel embeddingModel;
     private final EmbeddingStore<TextSegment> embeddingStore;
     private final AiSqlAssistantService aiSqlAssistantService;
@@ -88,85 +91,85 @@ public class AiServiceController {
 
     /**
      * 添加单条知识到向量库
-     * 
+     *
      * @param content 知识内容（纯文本）
      * @return 添加结果信息
      */
     @PostMapping("/knowledge/add")
     public String addKnowledge(@RequestBody String content) {
         log.info("📚 添加知识库内容，长度: {}", content.length());
-        
+
         // 1. 创建文档并分割
         Document document = Document.from(content);
         DocumentSplitter splitter = DocumentSplitters.recursive(500, 50);
         List<TextSegment> segments = splitter.split(document);
         log.info("📄 文档分割成 {} 个片段", segments.size());
-        
+
         // 2. 向量化
         Response<List<Embedding>> embedResponse = embeddingModel.embedAll(segments);
         List<Embedding> embeddings = embedResponse.content();
-        
+
         // 3. 存入向量库
         embeddingStore.addAll(embeddings, segments);
-        
+
         log.info("✅ 成功添加 {} 个向量到向量库", embeddings.size());
         return String.format("成功添加 %d 个知识片段", segments.size());
     }
 
     /**
      * 批量添加知识
-     * 
+     *
      * @param contents 知识内容列表
      * @return 添加结果信息
      */
     @PostMapping("/knowledge/batch")
     public String addKnowledgeBatch(@RequestBody List<String> contents) {
         int totalSegments = 0;
-        
+
         for (String content : contents) {
             Document document = Document.from(content);
             DocumentSplitter splitter = DocumentSplitters.recursive(500, 50);
             List<TextSegment> segments = splitter.split(document);
-            
+
             Response<List<Embedding>> embedResponse = embeddingModel.embedAll(segments);
             embeddingStore.addAll(embedResponse.content(), segments);
-            
+
             totalSegments += segments.size();
         }
-        
+
         log.info("✅ 批量添加完成，总计 {} 个知识片段", totalSegments);
         return String.format("成功添加 %d 条知识，共 %d 个片段", contents.size(), totalSegments);
     }
 
     /**
      * 向量检索测试（不调用AI，直接返回相似内容）
-     * 
+     *
      * @param query 查询文本
      * @return 相似度匹配结果列表
      */
     @GetMapping("/knowledge/search")
     public List<String> searchKnowledge(@RequestParam String query) {
         log.info("🔍 搜索知识库: {}", query);
-        
+
         // 1. 将查询文本转为向量
         Response<Embedding> queryEmbedding = embeddingModel.embed(query);
-        
+
         // 2. 构建搜索请求
         EmbeddingSearchRequest searchRequest = EmbeddingSearchRequest.builder()
                 .queryEmbedding(queryEmbedding.content())
                 .maxResults(5)
                 .minScore(0.5)
                 .build();
-        
+
         // 3. 执行向量检索
         EmbeddingSearchResult<TextSegment> searchResult = embeddingStore.search(searchRequest);
-        
+
         log.info("📊 找到 {} 个相关结果", searchResult.matches().size());
-        
+
         // 4. 返回匹配结果
         return searchResult.matches().stream()
-                .map(match -> String.format("[相似度: %.2f] %s", 
-                        match.score(), 
+                .map(match -> String.format("[相似度: %.2f] %s",
+                        match.score(),
                         match.embedded().text()))
                 .collect(Collectors.toList());
     }
@@ -183,7 +186,7 @@ public class AiServiceController {
 
     /**
      * 根据ID删除单个知识片段
-     * 
+     *
      * @param embeddingId 向量ID
      */
     @DeleteMapping("/knowledge/{embeddingId}")
@@ -195,7 +198,7 @@ public class AiServiceController {
 
     /**
      * 批量删除知识片段
-     * 
+     *
      * @param embeddingIds 向量ID列表
      */
     @DeleteMapping("/knowledge/batch")
@@ -207,18 +210,18 @@ public class AiServiceController {
 
     /**
      * 获取向量库统计信息
-     * 
+     *
      * @return 统计数据（总向量数、状态）
      */
     @GetMapping("/knowledge/stats")
     public Map<String, Object> getStats() {
         long count = 0;
-        
+
         // 如果是 MysqlEmbeddingStore，可以获取准确计数
         if (embeddingStore instanceof MysqlEmbeddingStore) {
             count = ((MysqlEmbeddingStore) embeddingStore).count();
         }
-        
+
         return Map.of(
                 "total_vectors", count,
                 "status", count > 0 ? "有数据" : "空库"
@@ -230,13 +233,56 @@ public class AiServiceController {
     /**
      * 基于知识库的 SQL 生成（带 RAG 检索）
      * AI 会自动从向量库检索相关内容来辅助回答
-     * 
-     * @param id 会话ID
+     *
+     * @param id          会话ID
      * @param userMessage 用户问题
      * @return 生成的 SQL 或回答
      */
     @GetMapping("/{id}/sql/generate")
     public String sqlGenerate(@PathVariable String id, @RequestParam String userMessage) {
         return aiSqlAssistantService.chatWithSql(id, userMessage);
+    }
+
+    /**
+     * 加载学生成绩系统 DDL 到向量库
+     * 使用分号分割 SQL 语句
+     */
+    @PostMapping("/knowledge/load-student-ddl")
+    public String loadStudentDdl() {
+        try {
+            log.info("📚 开始加载学生成绩系统 DDL");
+
+            // 1. 从 classpath 加载 SQL 文件
+            ClassPathResource resource = new ClassPathResource("student_ddl.sql");
+            String sqlContent = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+
+            // 2. 创建文档
+            Document document = Document.from(sqlContent);
+
+            // 3. 使用分号分割 SQL（每条 SQL 语句作为一个片段）
+            DocumentSplitter splitter = new DocumentByRegexSplitter(
+                    ";",
+                    ";",
+                    2000,
+                    100
+            );
+
+            List<TextSegment> segments = splitter.split(document);
+            log.info("📄 SQL 文档分割成 {} 个片段", segments.size());
+
+            // 4. 向量化
+            Response<List<Embedding>> embedResponse = embeddingModel.embedAll(segments);
+            List<Embedding> embeddings = embedResponse.content();
+
+            // 5. 存入向量库
+            embeddingStore.addAll(embeddings, segments);
+
+            log.info("✅ 成功加载学生成绩系统 DDL，共 {} 个向量", embeddings.size());
+            return String.format("成功加载学生成绩系统 DDL，共 %d 个片段", segments.size());
+
+        } catch (Exception e) {
+            log.error("❌ 加载 DDL 失败", e);
+            return "加载失败: " + e.getMessage();
+        }
     }
 }
