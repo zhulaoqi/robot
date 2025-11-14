@@ -95,13 +95,41 @@ public String getUserCodeByUsername(@P("用户名称") String username) {
 从自然语言中提取结构化数据：
 
 ```java
-
 @SystemMessage("请在用户提供的文本中提取出人员信息")
 Person extractPerson(@UserMessage String message);
 ```
 
 输入：`"我叫张三，今年25岁，住在北京"`  
 输出：`Person{name="张三", age=25, city="北京"}`
+
+### 7. 📝 Text-to-SQL（自然语言转SQL）
+
+基于 RAG 技术实现自然语言到 SQL 的智能转换：
+
+**工作流程**：
+```
+1. 加载数据库 DDL → 向量化 → 存储到知识库
+2. 用户用自然语言提问
+3. AI 从知识库检索相关表结构
+4. 生成可执行的 SQL 语句
+```
+
+**特点**：
+- ✅ 自动理解数据库表结构和关系
+- ✅ 支持复杂的多表关联查询
+- ✅ 处理中文自然语言输入
+- ✅ 生成标准 SQL 语法
+
+**示例**：
+```
+输入："查询所有在读学生的姓名和邮箱"
+输出：SELECT name, email FROM students WHERE status = '在读';
+
+输入："统计每个专业的学生人数"
+输出：SELECT m.major_name, COUNT(*) as student_count 
+      FROM students s JOIN majors m ON s.major_id = m.major_id 
+      GROUP BY m.major_name;
+```
 
 ---
 
@@ -218,22 +246,22 @@ CREATE TABLE IF NOT EXISTS knowledge_embedding (
 spring:
   datasource:
     url: jdbc:mysql://localhost:3306/langchain_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
-    username: root
-    password: 你的密码
+    username: your_username
+    password: your_password
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 langchain4j:
   open-ai:
     chat-model:
-      api-key: 你的通义千问API_KEY
+      api-key: sk-xxxxxxxxxxxxxxxxxxxx  # 你的通义千问 API Key
       model-name: qwen-plus
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
     streaming-chat-model:
-      api-key: 你的通义千问API_KEY
+      api-key: sk-xxxxxxxxxxxxxxxxxxxx  # 你的通义千问 API Key
       model-name: qwen-plus
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
     embedding-model:
-      api-key: 你的通义千问API_KEY
+      api-key: sk-xxxxxxxxxxxxxxxxxxxx  # 你的通义千问 API Key
       model-name: text-embedding-v4
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
 ```
@@ -435,9 +463,19 @@ DELETE /ai/chat/knowledge/clear
 GET /ai/chat/knowledge/stats
 ```
 
+### Text-to-SQL 功能
+
+#### 11. 加载数据库 DDL 到知识库
+
+```http
+POST /ai/chat/knowledge/load-student-ddl
+```
+
+**说明**：将 `student_ddl.sql` 文件中的表结构加载到向量库，用于后续的 SQL 生成。
+
 ### RAG 功能
 
-#### 11. SQL 生成（带 RAG）
+#### 12. SQL 生成（带 RAG）
 
 ```http
 GET /ai/chat/{memoryId}/sql/generate?userMessage=查询所有用户
@@ -497,6 +535,57 @@ curl -G "http://localhost:8080/ai/chat" \
 
 **AI 回复**：张铁牛的用户编码是 003
 
+### 示例 4：Text-to-SQL（自然语言生成 SQL）
+
+```bash
+# 1. 先加载数据库表结构到知识库
+curl -X POST "http://localhost:8080/ai/chat/knowledge/load-student-ddl"
+
+# 2. 查看加载的片段数量
+curl "http://localhost:8080/ai/chat/knowledge/stats"
+
+# 3. 测试向量检索（验证表结构已加载）
+curl -G "http://localhost:8080/ai/chat/knowledge/search" \
+  --data-urlencode "query=学生表有哪些字段"
+
+# 4. 使用自然语言生成 SQL
+curl -G "http://localhost:8080/ai/chat/sql001/sql/generate" \
+  --data-urlencode "userMessage=查询所有在读学生的姓名和学号"
+
+# 5. 复杂查询示例
+curl -G "http://localhost:8080/ai/chat/sql002/sql/generate" \
+  --data-urlencode "userMessage=统计每个专业的学生人数，按人数降序排列"
+
+# 6. 关联查询示例
+curl -G "http://localhost:8080/ai/chat/sql003/sql/generate" \
+  --data-urlencode "userMessage=查询计算机专业学生的所有考试成绩"
+```
+
+**AI 生成的 SQL 示例**：
+
+```sql
+-- 示例 1：简单查询
+SELECT student_no, name 
+FROM students 
+WHERE status = '在读';
+
+-- 示例 2：统计查询
+SELECT m.major_name, COUNT(*) as student_count
+FROM students s
+JOIN majors m ON s.major_id = m.major_id
+GROUP BY m.major_name
+ORDER BY student_count DESC;
+
+-- 示例 3：复杂关联查询
+SELECT s.name, c.course_name, sc.score
+FROM students s
+JOIN majors m ON s.major_id = m.major_id
+JOIN scores sc ON s.student_id = sc.student_id
+JOIN exam_arrangements ea ON sc.exam_id = ea.exam_id
+JOIN courses c ON ea.course_id = c.course_id
+WHERE m.major_name = '计算机';
+```
+
 ---
 
 ## ⚙️ 配置说明
@@ -554,7 +643,8 @@ robot/
 │   │   └── SysTools.java                 # 工具类（Function Calling）
 │   └── RobotApplication.java             # 启动类
 ├── src/main/resources/
-│   └── application.yaml                  # 配置文件
+│   ├── application.yaml                  # 配置文件
+│   └── student_ddl.sql                   # 学生成绩系统表结构（Text-to-SQL）
 └── pom.xml                               # Maven 配置
 ```
 
@@ -601,7 +691,42 @@ robot/
 - ✅ 使用 Spring 的 `@Value` 注解
 - ✅ 生产环境使用配置中心（Nacos、Apollo）
 
-### Q5: 如何扩展更多功能？
+### Q5: Text-to-SQL 如何提高准确性？
+
+**A**:
+
+1. **优化 DDL 质量**：
+   - 添加详细的字段注释
+   - 明确表之间的关系
+   - 包含常用查询示例
+
+2. **调整分割策略**：
+   - 使用 `DocumentSplitters.recursive()` 智能分割
+   - 确保每个片段包含完整的表定义
+   - 建议片段大小：800 字符
+
+3. **降低检索阈值**：
+   - 从 0.6 降到 0.45
+   - 增加 `maxResults` 到 10
+
+4. **优化系统提示词**：
+   - 在 `@SystemMessage` 中明确要求返回可执行的 SQL
+   - 提供 SQL 编写规范
+
+### Q6: 通义千问 API 限制如何处理？
+
+**A**:
+
+- **Embedding 批量限制**：每次最多 10 个文本
+  - 解决方案：代码中已实现分批处理
+  
+- **QPM 限制**：每分钟请求数限制
+  - 解决方案：添加延迟或使用更高等级账号
+  
+- **单文本长度限制**：约 6000 汉字
+  - 解决方案：使用文档分割器
+
+### Q7: 如何扩展更多功能？
 
 **A**: 基于 Langchain4j 可以轻松扩展：
 
@@ -609,6 +734,7 @@ robot/
 - 🎤 **语音对话**：集成语音识别和合成
 - 📄 **文档解析**：支持 PDF、Word 等文档
 - 🔗 **Agent**：构建多步骤推理的智能代理
+- 📊 **BI 报表**：Text-to-SQL + 数据可视化
 
 ---
 
