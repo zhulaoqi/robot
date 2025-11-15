@@ -11,7 +11,7 @@
 
 支持多轮对话 · RAG 检索 · 工具调用 · Text-to-SQL · 向量知识库
 
-[快速开始](#-快速开始) · [功能特性](#-功能特性) · [在线演示](#-在线演示) · [文档](#-文档)
+[快速开始](#-快速开始) · [功能特性](#-功能特性) · [API 文档](docs/API.md) · [系统架构](#-系统架构)
 
 </div>
 
@@ -124,35 +124,85 @@ AI 可以自主判断并调用外部工具：
 
 ## 📊 系统架构
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Client Layer 客户端层                    │
-│                     HTTP REST API / SSE                      │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────────┐
-│                   Controller Layer 控制层                     │
-│        AiServiceController - 统一 API 入口                    │
-└────────┬───────────────┬───────────────┬────────────────────┘
-         │               │               │
-    ┌────▼────┐   ┌──────▼──────┐  ┌────▼────────┐
-    │AI Service│   │AdvancedRag  │  │QueryTransform│
-    │  对话服务 │   │  高级RAG    │  │  查询转换   │
-    └────┬────┘   └──────┬──────┘  └────┬────────┘
-         │               │               │
-    ┌────▼───────────────▼───────────────▼──────────┐
-    │         Langchain4j Framework Core             │
-    │  - ChatModel (对话)  - EmbeddingModel (向量)    │
-    │  - ChatMemory (记忆)  - ContentRetriever (检索) │
-    │  - Tools (工具)       - Streaming (流式)        │
-    └────────┬──────────────────┬────────────────────┘
-             │                  │
-    ┌────────▼─────────┐  ┌─────▼────────────────┐
-    │  通义千问 API     │  │   MySQL Database     │
-    │  - Chat API      │  │  - chat_memory       │
-    │  - Embedding API │  │  - knowledge_embedding│
-    │  - Vision API    │  │  - 业务数据表         │
-    └──────────────────┘  └──────────────────────┘
+```mermaid
+graph TB
+    Client[👤 客户端<br/>HTTP/SSE]
+    
+    subgraph "🎯 控制层"
+        Controller[AiServiceController<br/>统一API入口]
+    end
+    
+    subgraph "🧠 服务层"
+        AiService[AiSqlAssistantService<br/>AI对话服务]
+        RagService[AdvancedRagService<br/>高级RAG检索]
+        QueryService[QueryTransformService<br/>查询转换优化]
+        AgentService[AgentService<br/>AI Agent任务规划]
+        ToolsService[SysTools<br/>工具调用]
+    end
+    
+    subgraph "🔧 Langchain4j 核心框架"
+        ChatModel[ChatModel<br/>对话模型]
+        EmbeddingModel[EmbeddingModel<br/>向量模型]
+        ChatMemory[ChatMemoryProvider<br/>记忆管理]
+        ContentRetriever[ContentRetriever<br/>内容检索]
+        Streaming[StreamingChatModel<br/>流式输出]
+    end
+    
+    subgraph "💾 数据存储层"
+        MySQL[(MySQL Database)]
+        ChatMemoryTable[chat_memory<br/>对话记忆表]
+        EmbeddingTable[knowledge_embedding<br/>向量知识表]
+        BusinessTable[业务数据表<br/>students/scores...]
+    end
+    
+    subgraph "🌐 外部服务"
+        QwenAPI[阿里云通义千问<br/>qwen-plus]
+        EmbeddingAPI[向量化API<br/>text-embedding-v4]
+        VisionAPI[多模态API<br/>qwen-vl-plus]
+        MapAPI[高德地图API<br/>天气/地点]
+    end
+    
+    Client --> Controller
+    
+    Controller --> AiService
+    Controller --> RagService
+    Controller --> QueryService
+    Controller --> AgentService
+    
+    AiService --> ChatModel
+    AiService --> ChatMemory
+    AiService --> ToolsService
+    
+    RagService --> ContentRetriever
+    RagService --> EmbeddingModel
+    RagService --> ChatModel
+    
+    QueryService --> ChatModel
+    
+    AgentService --> ChatModel
+    AgentService --> ToolsService
+    
+    ChatModel --> Streaming
+    ChatModel --> QwenAPI
+    
+    EmbeddingModel --> EmbeddingAPI
+    
+    ChatMemory --> MySQL
+    ContentRetriever --> MySQL
+    
+    MySQL --> ChatMemoryTable
+    MySQL --> EmbeddingTable
+    MySQL --> BusinessTable
+    
+    ToolsService --> MapAPI
+    ToolsService --> MySQL
+    
+    style Client fill:#e1f5ff
+    style Controller fill:#fff3e0
+    style ChatModel fill:#f3e5f5
+    style EmbeddingModel fill:#f3e5f5
+    style MySQL fill:#e8f5e9
+    style QwenAPI fill:#fce4ec
 ```
 
 ---
@@ -504,9 +554,9 @@ AI:
 
 ## 📧 联系方式
 
-- 📮 Issue: [GitHub Issues](https://github.com/zhulaoqi/robot/issues)
-- 📧 Email: 1647110340@qq.com
-- 💬 讨论区: [GitHub Discussions](https://github.com/zhulaoqi/robot/discussions)
+- 📮 提交问题: [GitHub Issues](https://github.com/zhulaoqi/robot/issues)
+- 📧 邮箱联系: 1647110340@qq.com
+- ⭐ 欢迎 Star 和 Fork
 
 ---
 
