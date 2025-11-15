@@ -10,6 +10,7 @@ import dev.langchain4j.data.document.DocumentSplitter;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.output.Response;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
@@ -44,6 +45,10 @@ public class AiServiceController {
     private final AdvancedRagService advancedRagService;
     private final PromptManager promptManager;
     private final McpManager mcpManager;
+    private final QueryTransformService queryTransformService;
+    private final ChatModel chatModel;
+
+
 
     // ==================== 基础聊天功能 ====================
 
@@ -332,26 +337,6 @@ public class AiServiceController {
         return agentService.generalAssist(request);
     }
 
-// ==================== 📚 高级 RAG 功能 ====================
-
-    /**
-     * 📚 知识库问答（带 RAG 检索）
-     */
-    @GetMapping("/rag/chat")
-    public String ragChat(@RequestParam String query) {
-        log.info("📚 [RAG问答] 查询: {}", query);
-        return advancedRagService.chatWithKnowledge(query);
-    }
-
-    /**
-     * 📊 SQL 生成（基于知识库的表结构）
-     */
-    @GetMapping("/rag/generate-sql")
-    public String ragGenerateSql(@RequestParam String query) {
-        log.info("📊 [RAG-SQL] 查询: {}", query);
-        return advancedRagService.generateSqlWithKnowledge(query);
-    }
-
 // ==================== 📊 知识库管理（用于测试）====================
 
     /**
@@ -438,5 +423,285 @@ public class AiServiceController {
                 request.getParameters()
         );
     }
+    // ==================== 🔍 查询转换功能 ====================
 
+    /**
+     * 🔍 查询扩展
+     */
+    @GetMapping("/query/expand")
+    public Map<String, String> expandQuery(@RequestParam String query) {
+        log.info("🔍 [查询扩展] 原始查询: {}", query);
+
+        long startTime = System.currentTimeMillis();
+        String expanded = queryTransformService.expandQuery(query);
+        long duration = System.currentTimeMillis() - startTime;
+
+        log.info("✨ 扩展后: {}", expanded);
+
+        return Map.of(
+                "original", query,
+                "expanded", expanded,
+                "length_original", String.valueOf(query.length()),
+                "length_expanded", String.valueOf(expanded.length()),
+                "duration_ms", String.valueOf(duration)
+        );
+    }
+
+    /**
+     * 🔍 SQL 查询重写
+     */
+    @GetMapping("/query/rewrite-sql")
+    public Map<String, String> rewriteForSql(@RequestParam String query) {
+        log.info("🔍 [SQL查询重写] 原始查询: {}", query);
+
+        long startTime = System.currentTimeMillis();
+        String rewritten = queryTransformService.rewriteForSql(query);
+        long duration = System.currentTimeMillis() - startTime;
+
+        log.info("✨ 重写后: {}", rewritten);
+
+        return Map.of(
+                "original", query,
+                "rewritten", rewritten,
+                "type", "sql-oriented",
+                "duration_ms", String.valueOf(duration)
+        );
+    }
+
+    /**
+     * 🔍 生成多个查询视角
+     */
+    @GetMapping("/query/multi-perspective")
+    public Map<String, Object> generateMultiQueries(@RequestParam String query) {
+        log.info("🔍 [多视角查询] 原始查询: {}", query);
+
+        long startTime = System.currentTimeMillis();
+        List<String> multiQueries = queryTransformService.generateMultiQueries(query);
+        long duration = System.currentTimeMillis() - startTime;
+
+        log.info("✨ 生成 {} 个查询视角", multiQueries.size());
+
+        return Map.of(
+                "original", query,
+                "perspectives", multiQueries,
+                "count", multiQueries.size(),
+                "duration_ms", duration
+        );
+    }
+
+    /**
+     * 🔍 Step-back 查询生成
+     */
+    @GetMapping("/query/step-back")
+    public Map<String, String> stepBackQuery(@RequestParam String query) {
+        log.info("🔍 [Step-back查询] 原始查询: {}", query);
+
+        long startTime = System.currentTimeMillis();
+        String stepBack = queryTransformService.stepBackQuery(query);
+        long duration = System.currentTimeMillis() - startTime;
+
+        log.info("✨ 后退查询: {}", stepBack);
+
+        return Map.of(
+                "original", query,
+                "step_back", stepBack,
+                "purpose", "先理解背景，再回答具体问题",
+                "duration_ms", String.valueOf(duration)
+        );
+    }
+
+// ==================== 📚 高级 RAG 功能 ====================
+
+    /**
+     * 📚 带查询改写的 RAG
+     */
+    @GetMapping("/rag/with-query-transform")
+    public Map<String, Object> ragWithQueryTransform(@RequestParam String query) {
+        log.info("📚 [查询改写RAG] 原始查询: {}", query);
+
+        long startTime = System.currentTimeMillis();
+        String answer = advancedRagService.chatWithQueryTransform(query);
+        long duration = System.currentTimeMillis() - startTime;
+
+        log.info("✅ RAG 回答生成完成");
+
+        return Map.of(
+                "query", query,
+                "answer", answer,
+                "duration_ms", duration
+        );
+    }
+
+    /**
+     * 📚 多查询 RAG
+     */
+    @GetMapping("/rag/with-multi-query")
+    public Map<String, Object> ragWithMultiQuery(@RequestParam String query) {
+        log.info("📚 [多查询RAG] 原始查询: {}", query);
+
+        long startTime = System.currentTimeMillis();
+        String answer = advancedRagService.chatWithMultiQuery(query);
+        long duration = System.currentTimeMillis() - startTime;
+
+        log.info("✅ RAG 回答生成完成");
+
+        return Map.of(
+                "query", query,
+                "answer", answer,
+                "duration_ms", duration
+        );
+    }
+
+    /**
+     * 📊 RAG 对比测试：基础 vs 查询改写 vs 多查询
+     */
+    @GetMapping("/rag/compare-all")
+    public Map<String, Object> compareAllRagMethods(@RequestParam String query) {
+        log.info("📊 [RAG全对比] 查询: {}", query);
+
+        // 1. 基础 RAG（不改写查询）
+        long basicStart = System.currentTimeMillis();
+        Response<Embedding> basicEmbedding = embeddingModel.embed(query);
+        EmbeddingSearchResult<TextSegment> basicResult = embeddingStore.search(
+                EmbeddingSearchRequest.builder()
+                        .queryEmbedding(basicEmbedding.content())
+                        .maxResults(5)
+                        .minScore(0.3)
+                        .build()
+        );
+        String basicContext = basicResult.matches().stream()
+                .map(match -> match.embedded().text())
+                .collect(Collectors.joining("\n\n"));
+        String basicAnswer = chatModel.chat(String.format("""
+            基于以下信息回答问题：
+            
+            %s
+            
+            问题：%s
+            """, basicContext, query));
+        long basicDuration = System.currentTimeMillis() - basicStart;
+
+        // 2. 查询改写 RAG
+        long transformStart = System.currentTimeMillis();
+        String transformAnswer = advancedRagService.chatWithQueryTransform(query);
+        long transformDuration = System.currentTimeMillis() - transformStart;
+
+        // 3. 多查询 RAG
+        long multiStart = System.currentTimeMillis();
+        String multiAnswer = advancedRagService.chatWithMultiQuery(query);
+        long multiDuration = System.currentTimeMillis() - multiStart;
+
+        return Map.of(
+                "query", query,
+                "methods", Map.of(
+                        "basic_rag", Map.of(
+                                "answer", basicAnswer,
+                                "results_count", basicResult.matches().size(),
+                                "avg_score", basicResult.matches().stream()
+                                        .mapToDouble(m -> m.score())
+                                        .average()
+                                        .orElse(0.0),
+                                "duration_ms", basicDuration
+                        ),
+                        "query_transform_rag", Map.of(
+                                "answer", transformAnswer,
+                                "duration_ms", transformDuration
+                        ),
+                        "multi_query_rag", Map.of(
+                                "answer", multiAnswer,
+                                "duration_ms", multiDuration
+                        )
+                ),
+                "total_duration_ms", basicDuration + transformDuration + multiDuration
+        );
+    }
+
+    /**
+     * 🧪 完整的 RAG 流程演示（带详细步骤）
+     */
+    @GetMapping("/rag/demo-full-process")
+    public Map<String, Object> demoFullRagProcess(@RequestParam String query) {
+        log.info("🧪 [完整RAG演示] 查询: {}", query);
+
+        List<Map<String, Object>> steps = new ArrayList<>();
+
+        // 步骤1: 查询扩展
+        long step1Start = System.currentTimeMillis();
+        String expandedQuery = queryTransformService.expandQuery(query);
+        long step1Duration = System.currentTimeMillis() - step1Start;
+        steps.add(Map.of(
+                "step", 1,
+                "name", "查询扩展",
+                "input", query,
+                "output", expandedQuery,
+                "duration_ms", step1Duration
+        ));
+
+        // 步骤2: 向量检索
+        long step2Start = System.currentTimeMillis();
+        Response<Embedding> queryEmbedding = embeddingModel.embed(expandedQuery);
+        EmbeddingSearchResult<TextSegment> searchResult = embeddingStore.search(
+                EmbeddingSearchRequest.builder()
+                        .queryEmbedding(queryEmbedding.content())
+                        .maxResults(5)
+                        .minScore(0.3)
+                        .build()
+        );
+        long step2Duration = System.currentTimeMillis() - step2Start;
+
+        List<Map<String, Object>> retrievedDocs = searchResult.matches().stream()
+                .map(match -> Map.<String, Object>of(
+                        "score", match.score(),
+                        "text", match.embedded().text().substring(0, Math.min(150, match.embedded().text().length())) + "..."
+                ))
+                .collect(Collectors.toList());
+
+        steps.add(Map.of(
+                "step", 2,
+                "name", "向量检索",
+                "results_count", searchResult.matches().size(),
+                "results", retrievedDocs,
+                "duration_ms", step2Duration
+        ));
+
+        // 步骤3: 构建上下文
+        String context = searchResult.matches().stream()
+                .map(match -> match.embedded().text())
+                .collect(Collectors.joining("\n\n"));
+
+        steps.add(Map.of(
+                "step", 3,
+                "name", "构建上下文",
+                "context_length", context.length()
+        ));
+
+        // 步骤4: 生成回答
+        long step4Start = System.currentTimeMillis();
+        String finalPrompt = String.format("""
+            基于以下检索到的信息回答用户问题。
+            
+            检索到的信息：
+            %s
+            
+            用户问题：%s
+            
+            请给出准确、详细的回答。
+            """, context, query);
+
+        String answer = chatModel.chat(finalPrompt);
+        long step4Duration = System.currentTimeMillis() - step4Start;
+
+        steps.add(Map.of(
+                "step", 4,
+                "name", "生成回答",
+                "answer", answer,
+                "duration_ms", step4Duration
+        ));
+
+        return Map.of(
+                "original_query", query,
+                "steps", steps,
+                "total_duration_ms", step1Duration + step2Duration + step4Duration
+        );
+    }
 }

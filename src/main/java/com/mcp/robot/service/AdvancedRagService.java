@@ -1,49 +1,113 @@
 package com.mcp.robot.service;
 
-import dev.langchain4j.service.SystemMessage;
-import dev.langchain4j.service.UserMessage;
-import dev.langchain4j.service.spring.AiService;
+import dev.langchain4j.data.embedding.Embedding;
+import dev.langchain4j.data.segment.TextSegment;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.output.Response;
+import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
+import dev.langchain4j.store.embedding.EmbeddingSearchResult;
+import dev.langchain4j.store.embedding.EmbeddingStore;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
-import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-/**
- * 高级 RAG 服务
- * 使用知识库检索增强生成
- */
-@AiService(
-    wiringMode = EXPLICIT,
-    chatModel = "openAiChatModel",
-    contentRetriever = "contentRetriever"  // 使用标准的 RAG 检索
-)
-public interface AdvancedRagService {
-    
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class AdvancedRagService {
+
+    private final QueryTransformService queryTransform;
+    private final EmbeddingModel embeddingModel;
+    private final EmbeddingStore<TextSegment> embeddingStore;
+    private final ChatModel chatModel;
+
     /**
-     * 📚 知识库问答（带检索）
+     * 带查询改写的 RAG
      */
-    @SystemMessage("""
-            你是一个专业的知识助手。
-            
-            你可以访问知识库中的信息来回答问题。
-            请仔细阅读检索到的相关内容，基于这些信息给出准确、详细的回答。
-            
-            如果检索到的内容不足以回答问题，请明确说明。
-            """)
-    String chatWithKnowledge(@UserMessage String query);
-    
+    public String chatWithQueryTransform(String userQuery) {
+        // 1. 查询改写
+        String expandedQuery = queryTransform.expandQuery(userQuery);
+        log.info("🔍 原始查询: {}", userQuery);
+        log.info("✨ 扩展查询: {}", expandedQuery);
+
+        // 2. 向量检索（使用扩展后的查询）
+        Response<Embedding> queryEmbedding = embeddingModel.embed(expandedQuery);
+
+        EmbeddingSearchRequest searchRequest = EmbeddingSearchRequest.builder()
+                .queryEmbedding(queryEmbedding.content())
+                .maxResults(5)
+                .minScore(0.3)
+                .build();
+
+        EmbeddingSearchResult<TextSegment> searchResult =
+                embeddingStore.search(searchRequest);
+
+        // 3. 构建上下文
+        String context = searchResult.matches().stream()
+                .map(match -> match.embedded().text())
+                .collect(Collectors.joining("\n\n"));
+
+        // 4. 生成回答
+        String finalPrompt = String.format("""
+                基于以下检索到的信息回答用户问题。
+                
+                检索到的信息：
+                %s
+                
+                用户问题：%s
+                
+                请给出准确、详细的回答。
+                """, context, userQuery);  // 注意：这里用原始查询
+
+        return chatModel.chat(finalPrompt);
+    }
+
     /**
-     * 📊 SQL 专家（带表结构检索）
+     * 多查询 RAG
      */
-    @SystemMessage("""
-            你是一个 SQL 专家。
-            
-            知识库中包含数据库表结构信息。
-            请根据检索到的表结构，生成准确、可执行的 SQL 查询语句。
-            
-            要求：
-            1. 使用实际存在的表名和字段名
-            2. 生成标准的 SELECT 语句
-            3. 考虑表之间的关联关系
-            4. 解释 SQL 的含义
-            """)
-    String generateSqlWithKnowledge(@UserMessage String query);
+    public String chatWithMultiQuery(String userQuery) {
+        // 1. 生成多个查询视角
+        List<String> queries = queryTransform.generateMultiQueries(userQuery);
+        log.info("🔍 生成 {} 个查询视角", queries.size());
+
+        // 2. 对每个查询进行检索
+        Set<TextSegment> allResults = new HashSet<>();
+        for (String query : queries) {
+            Response<Embedding> embedding = embeddingModel.embed(query);
+            EmbeddingSearchRequest request = EmbeddingSearchRequest.builder()
+                    .queryEmbedding(embedding.content())
+                    .maxResults(3)
+                    .minScore(0.3)
+                    .build();
+
+            EmbeddingSearchResult<TextSegment> result = embeddingStore.search(request);
+            result.matches().forEach(match -> allResults.add(match.embedded()));
+        }
+
+        log.info("📊 合并后共 {} 个独特结果", allResults.size());
+
+        // 3. 合并结果，生成回答
+        String context = allResults.stream()
+                .map(TextSegment::text)
+                .collect(Collectors.joining("\n\n"));
+
+        String finalPrompt = String.format("""
+                基于以下检索到的信息回答用户问题。
+                
+                检索到的信息：
+                %s
+                
+                用户问题：%s
+                
+                请给出准确、全面的回答。
+                """, context, userQuery);
+
+        return chatModel.chat(finalPrompt);
+    }
 }
