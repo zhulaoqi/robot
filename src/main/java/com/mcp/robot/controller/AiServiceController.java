@@ -1,6 +1,7 @@
 package com.mcp.robot.controller;
 
 import com.mcp.robot.model.Person;
+import com.mcp.robot.service.AdvancedRagService;
 import com.mcp.robot.service.AgentService;
 import com.mcp.robot.service.AiSqlAssistantService;
 import com.mcp.robot.service.MysqlEmbeddingStore;
@@ -40,6 +41,7 @@ public class AiServiceController {
     private final EmbeddingStore<TextSegment> embeddingStore;
     private final AiSqlAssistantService aiSqlAssistantService;
     private final AgentService agentService;
+    private final AdvancedRagService advancedRagService;
 
     // ==================== 基础聊天功能 ====================
 
@@ -306,7 +308,7 @@ public class AiServiceController {
      */
     @GetMapping("/agent/plan-trip")
     public String planTrip(@RequestParam String request) {
-        log.info("🤖 Agent任务 - 旅行规划: {}", request);
+        log.info("🤖 [旅行规划Agent] 请求: {}", request);
         return agentService.planTrip(request);
     }
 
@@ -315,7 +317,57 @@ public class AiServiceController {
      */
     @GetMapping("/agent/analyze-data")
     public String analyzeData(@RequestParam String request) {
-        log.info("🤖 Agent任务 - 数据分析: {}", request);
+        log.info("🤖 [数据分析Agent] 请求: {}", request);
         return agentService.analyzeData(request);
+    }
+
+    /**
+     * 🤖 综合助手 Agent
+     */
+    @GetMapping("/agent/general")
+    public String generalAssist(@RequestParam String request) {
+        log.info("🤖 [综合助手Agent] 请求: {}", request);
+        return agentService.generalAssist(request);
+    }
+
+// ==================== 📚 高级 RAG 功能 ====================
+
+    /**
+     * 📚 知识库问答（带 RAG 检索）
+     */
+    @GetMapping("/rag/chat")
+    public String ragChat(@RequestParam String query) {
+        log.info("📚 [RAG问答] 查询: {}", query);
+        return advancedRagService.chatWithKnowledge(query);
+    }
+
+    /**
+     * 📊 SQL 生成（基于知识库的表结构）
+     */
+    @GetMapping("/rag/generate-sql")
+    public String ragGenerateSql(@RequestParam String query) {
+        log.info("📊 [RAG-SQL] 查询: {}", query);
+        return advancedRagService.generateSqlWithKnowledge(query);
+    }
+
+// ==================== 📊 知识库管理（用于测试）====================
+
+    /**
+     * 📝 添加业务知识到知识库
+     */
+    @PostMapping("/rag/add-business-knowledge")
+    public String addBusinessKnowledge(@RequestBody String knowledge) {
+        log.info("📝 添加业务知识，长度: {}", knowledge.length());
+
+        // 复用现有的 addKnowledge 逻辑
+        Document document = Document.from(knowledge);
+        DocumentSplitter splitter = DocumentSplitters.recursive(500, 50);
+        List<TextSegment> segments = splitter.split(document);
+
+        Response<List<Embedding>> embedResponse = embeddingModel.embedAll(segments);
+        embeddingStore.addAll(embedResponse.content(), segments);
+
+        log.info("✅ 成功添加 {} 个知识片段", segments.size());
+        return String.format("成功添加业务知识，共 %d 个片段", segments.size());
     }
 }

@@ -8,29 +8,42 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
 
 /**
  * 高级 RAG 服务
+ * 使用知识库检索增强生成
  */
 @AiService(
-        wiringMode = EXPLICIT,
-        chatModel = "openAiChatModel",
-        contentRetriever = "contentRetriever"
+    wiringMode = EXPLICIT,
+    chatModel = "openAiChatModel",
+    contentRetriever = "contentRetriever"  // 使用标准的 RAG 检索
 )
 public interface AdvancedRagService {
-
+    
     /**
-     * 🔍 Query Transformation：先改写查询，再检索
+     * 📚 知识库问答（带检索）
      */
     @SystemMessage("""
-            你是一个专业的查询优化助手。
+            你是一个专业的知识助手。
             
-            工作流程：
-            1. 理解用户的简短查询
-            2. 将查询扩展为更详细、更专业的描述
-            3. 使用扩展后的查询进行知识库检索
-            4. 基于检索结果生成回答
+            你可以访问知识库中的信息来回答问题。
+            请仔细阅读检索到的相关内容，基于这些信息给出准确、详细的回答。
             
-            示例：
-            - 用户："张三成绩"
-            - 扩展："查询学生张三在所有考试中的成绩情况，包括课程名称、考试类型和具体分数"
+            如果检索到的内容不足以回答问题，请明确说明。
             """)
-    String chatWithQueryTransformation(@UserMessage String query);
+    String chatWithKnowledge(@UserMessage String query);
+    
+    /**
+     * 📊 SQL 专家（带表结构检索）
+     */
+    @SystemMessage("""
+            你是一个 SQL 专家。
+            
+            知识库中包含数据库表结构信息。
+            请根据检索到的表结构，生成准确、可执行的 SQL 查询语句。
+            
+            要求：
+            1. 使用实际存在的表名和字段名
+            2. 生成标准的 SELECT 语句
+            3. 考虑表之间的关联关系
+            4. 解释 SQL 的含义
+            """)
+    String generateSqlWithKnowledge(@UserMessage String query);
 }
