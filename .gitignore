@@ -34,7 +34,3 @@ logs/
 
 # Spring Boot
 HELP.md
-
-# 本地配置（包含敏感信息）
-application-local.yaml
-application-local.yml
