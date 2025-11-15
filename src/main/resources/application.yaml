@@ -34,3 +34,7 @@ mybatis-plus:
       logic-delete-field: deleted  # 逻辑删除字段（可选）
       logic-delete-value: 1
       logic-not-delete-value: 0
+
+external-api:
+  amap:
+    key: you-map-key
