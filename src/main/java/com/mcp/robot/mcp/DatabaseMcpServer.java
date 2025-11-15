@@ -17,10 +17,10 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class DatabaseMcpServer implements McpServer {
-    
+
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    
+
     @Override
     public ServerInfo getServerInfo() {
         ServerInfo info = new ServerInfo();
@@ -30,7 +30,7 @@ public class DatabaseMcpServer implements McpServer {
         info.setProtocol("mcp/1.0");
         return info;
     }
-    
+
     @Override
     public List<Tool> listTools() {
         Tool queryTool = new Tool();
@@ -39,24 +39,24 @@ public class DatabaseMcpServer implements McpServer {
         queryTool.setParameters(Map.of(
                 "sql", createParameter("string", "SQL 查询语句", true)
         ));
-        
+
         return List.of(queryTool);
     }
-    
+
     @Override
     public ToolResult executeTool(String toolName, Map<String, Object> parameters) {
         log.info("🔧 [MCP-Database] 执行工具: {}", toolName);
-        
+
         if ("executeQuery".equals(toolName)) {
             String sql = (String) parameters.get("sql");
             return executeQuery(sql);
         }
-        
+
         ErrorResult error = new ErrorResult();
         error.setError("未知的工具: " + toolName);
         return error;
     }
-    
+
     private ToolResult executeQuery(String sql) {
         try {
             // 安全检查
@@ -65,16 +65,16 @@ public class DatabaseMcpServer implements McpServer {
                 error.setError("只允许 SELECT 查询");
                 return error;
             }
-            
+
             List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
             String jsonResult = objectMapper.writerWithDefaultPrettyPrinter()
                     .writeValueAsString(results);
-            
+
             SuccessResult success = new SuccessResult();
-            success.setContent(String.format("查询成功，共 %d 条记录：\n%s", 
+            success.setContent(String.format("查询成功，共 %d 条记录：\n%s",
                     results.size(), jsonResult));
             return success;
-            
+
         } catch (Exception e) {
             log.error("SQL 执行失败", e);
             ErrorResult error = new ErrorResult();
@@ -82,7 +82,7 @@ public class DatabaseMcpServer implements McpServer {
             return error;
         }
     }
-    
+
     private ParameterSchema createParameter(String type, String description, boolean required) {
         ParameterSchema param = new ParameterSchema();
         param.setType(type);

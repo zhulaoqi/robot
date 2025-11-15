@@ -12,22 +12,22 @@ import java.util.Map;
  * 所有能力插件都需要实现此接口
  */
 public interface McpServer {
-    
+
     /**
      * 获取 Server 信息
      */
     ServerInfo getServerInfo();
-    
+
     /**
      * 列出所有可用工具
      */
     List<Tool> listTools();
-    
+
     /**
      * 执行工具调用
      */
     ToolResult executeTool(String toolName, Map<String, Object> parameters);
-    
+
     /**
      * Server 信息
      */
@@ -38,7 +38,7 @@ public interface McpServer {
         private String description;    // 描述
         private String protocol;       // 协议版本（如 "mcp/1.0"）
     }
-    
+
     /**
      * 工具定义
      */
@@ -48,7 +48,7 @@ public interface McpServer {
         private String description;               // 工具描述
         private Map<String, ParameterSchema> parameters;  // 参数定义
     }
-    
+
     /**
      * 参数定义
      */
@@ -58,7 +58,7 @@ public interface McpServer {
         private String description;    // 描述
         private boolean required;      // 是否必需
     }
-    
+
     /**
      * 工具执行结果
      */
@@ -70,21 +70,21 @@ public interface McpServer {
     interface ToolResult {
         boolean isSuccess();
     }
-    
+
     @Data
     class SuccessResult implements ToolResult {
         private String content;
-        
+
         @Override
         public boolean isSuccess() {
             return true;
         }
     }
-    
+
     @Data
     class ErrorResult implements ToolResult {
         private String error;
-        
+
         @Override
         public boolean isSuccess() {
             return false;

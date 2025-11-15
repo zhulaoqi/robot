@@ -10,11 +10,11 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
  * 多模态服务（图片+文本）
  */
 @AiService(
-    wiringMode = EXPLICIT,
-    chatModel = "openAiChatModel"
+        wiringMode = EXPLICIT,
+        chatModel = "openAiChatModel"
 )
 public interface VisionService {
-    
+
     /**
      * 🖼️ 图片分析
      */
@@ -25,7 +25,7 @@ public interface VisionService {
             {{question}}
             """)
     String analyzeImage(
-        @V("imageUrl") String imageUrl,
-        @V("question") String question
+            @V("imageUrl") String imageUrl,
+            @V("question") String question
     );
 }

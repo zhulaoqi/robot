@@ -18,8 +18,7 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
  * @author Kinch.zhu
  * @date 2025/5/16
  */
-@AiService(wiringMode = EXPLICIT, chatModel = "openAiChatModel", streamingChatModel = "openAiStreamingChatModel", chatMemoryProvider = "chatMemoryProvider", contentRetriever = "contentRetriever", tools = {
-        "sysTools"})
+@AiService(wiringMode = EXPLICIT, chatModel = "openAiChatModel", streamingChatModel = "openAiStreamingChatModel", chatMemoryProvider = "chatMemoryProvider", contentRetriever = "contentRetriever", tools = {"sysTools"})
 public interface AiSqlAssistantService {
     @SystemMessage("""
             你是一个智能助手，可以帮助用户完成各种任务。
@@ -65,28 +64,25 @@ public interface AiSqlAssistantService {
     List<String> mockUsername(@V("total") Integer total);
 
     @SystemMessage("""
-            你是一名SQL分析专家和数据查询助手。
+            你是一个专业的 SQL 助手，帮助用户生成和执行 SQL 查询。
             
-            重要提示：你可以通过向量检索获取数据库表结构信息（DDL）。请仔细阅读检索到的表结构，理解表名、字段名、字段类型和表之间的关联关系。
+            **重要规则**：
+            1. 优先使用检索到的表结构信息（DDL）
+            2. 如果用户查询课程相关信息，注意课程简称与全称的映射：
+               - "语文" → 使用 LIKE '%语文%' 模糊匹配（可能是"大学语文"）
+               - "数学" → 使用 LIKE '%数学%' 模糊匹配（可能是"高等数学"）
+               - "英语" → 使用 LIKE '%英语%' 模糊匹配（可能是"大学英语"）
+            3. 对于课程查询，推荐使用模糊匹配而不是精确匹配
+            4. 生成 SQL 后，使用 executeQuery 工具执行
+            5. 将查询结果用自然语言解释给用户
             
-            工作流程：
-            1. 理解用户的查询需求
-            2. 根据检索到的DDL信息，识别需要查询的表和字段
-            3. 生成标准的、可执行的 SELECT 查询语句（必须使用实际存在的表名和字段名）
-            4. 自动调用 executeQuery 工具执行SQL并获取结果
-            5. 用自然语言解释查询结果
+            **SQL 生成最佳实践**：
             
-            要求：
-            1. 必须使用检索到的DDL中的实际表名和字段名，不要使用假设的名称
-            2. 生成标准的、可执行的 SELECT 语句
-            3. 注意表之间的关联关系和字段类型（特别是主键和外键）
-            4. 执行查询后，用易懂的语言向用户解释结果
-            5. 如果查询结果为空，给出可能的原因
-            6. 如果检索不到相关的表结构信息，明确告知用户需要先加载DDL
+            --  不推荐（精确匹配可能失败）
+            WHERE course_name = '语文'
             
-            示例：
-            - 用户问："张三的语文成绩是多少？"
-            - 你应该：检索相关表结构 → 识别学生表、成绩表、课程表 → 生成JOIN查询 → 执行并解释结果
+            --  推荐（模糊匹配更容易找到）
+            WHERE course_name LIKE '%语文%'
             """)
     String chatWithSql(@MemoryId String memoryId, @UserMessage String message);
 }

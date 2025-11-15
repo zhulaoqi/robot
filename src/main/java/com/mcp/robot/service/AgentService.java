@@ -12,12 +12,12 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
  * 可以自主规划多步骤任务，调用多个工具完成复杂任务
  */
 @AiService(
-    wiringMode = EXPLICIT,
-    chatModel = "openAiChatModel",
-    tools = {"sysTools"}  // 可以调用所有工具
+        wiringMode = EXPLICIT,
+        chatModel = "openAiChatModel",
+        tools = {"sysTools"}  // 可以调用所有工具
 )
 public interface AgentService {
-    
+
     /**
      * 🤖 旅行规划 Agent
      * 自动查询天气、搜索景点、推荐路线
@@ -38,7 +38,7 @@ public interface AgentService {
             - 行程安排建议
             """)
     String planTrip(@UserMessage String request);
-    
+
     /**
      * 🤖 数据分析 Agent
      * 自动查询数据库、计算统计、生成报告
@@ -56,7 +56,7 @@ public interface AgentService {
             最后给出清晰的分析结论。
             """)
     String analyzeData(@UserMessage String request);
-    
+
     /**
      * 🤖 综合助手 Agent
      * 根据用户需求自动选择合适的工具和策略

@@ -49,7 +49,6 @@ public class AiServiceController {
     private final ChatModel chatModel;
 
 
-
     // ==================== 基础聊天功能 ====================
 
     /**
@@ -573,12 +572,12 @@ public class AiServiceController {
                 .map(match -> match.embedded().text())
                 .collect(Collectors.joining("\n\n"));
         String basicAnswer = chatModel.chat(String.format("""
-            基于以下信息回答问题：
-            
-            %s
-            
-            问题：%s
-            """, basicContext, query));
+                基于以下信息回答问题：
+                
+                %s
+                
+                问题：%s
+                """, basicContext, query));
         long basicDuration = System.currentTimeMillis() - basicStart;
 
         // 2. 查询改写 RAG
@@ -678,15 +677,15 @@ public class AiServiceController {
         // 步骤4: 生成回答
         long step4Start = System.currentTimeMillis();
         String finalPrompt = String.format("""
-            基于以下检索到的信息回答用户问题。
-            
-            检索到的信息：
-            %s
-            
-            用户问题：%s
-            
-            请给出准确、详细的回答。
-            """, context, query);
+                基于以下检索到的信息回答用户问题。
+                
+                检索到的信息：
+                %s
+                
+                用户问题：%s
+                
+                请给出准确、详细的回答。
+                """, context, query);
 
         String answer = chatModel.chat(finalPrompt);
         long step4Duration = System.currentTimeMillis() - step4Start;
