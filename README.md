@@ -498,7 +498,7 @@ AI:
 
 如果这个项目对你有帮助，欢迎 Star ⭐ 支持！
 
-[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/langchain4j-robot&type=Date)](https://star-history.com/#yourusername/langchain4j-robot&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=robot/robot&type=Date)](https://star-history.com/#yourusername/langchain4j-robot&Date)
 
 ---
 
