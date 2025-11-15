@@ -227,7 +227,7 @@ public class SysTools {
             搜索指定城市的地点（如餐厅、酒店、景点等）。
             参数：
             - keyword: 搜索关键词（如：火锅、咖啡厅）
-            - city: 城市名称（如：北京）
+            - city: 城市名称（如：北京、深圳）
             返回：地点列表
             """)
     public String searchPlace(
@@ -236,38 +236,73 @@ public class SysTools {
         log.info("🔧 Tool调用 - 搜索地点: {} in {}", keyword, city);
 
         try {
-
-            String url = String.format(
-                    "https://restapi.amap.com/v3/place/text?keywords=%s&city=%s&key=%s",
-                    URLEncoder.encode(keyword, StandardCharsets.UTF_8),
-                    URLEncoder.encode(city, StandardCharsets.UTF_8),
+            // 🆕 第一步：先获取城市的 adcode（城市编码）
+            String geocodeUrl = String.format(
+                    "https://restapi.amap.com/v3/geocode/geo?address=%s&key=%s",
+                    city,
                     amapApiKey
             );
+
+            Map<String, Object> geocodeResult = restTemplate.getForObject(geocodeUrl, Map.class);
+
+            // 提取 adcode
+            String cityCode = city;  // 默认使用城市名称
+            if (geocodeResult != null && "1".equals(geocodeResult.get("status"))) {
+                List<Map<String, Object>> geocodes = (List<Map<String, Object>>) geocodeResult.get("geocodes");
+                if (geocodes != null && !geocodes.isEmpty()) {
+                    cityCode = (String) geocodes.get(0).get("adcode");
+                    log.info("📍 城市编码: {} -> {}", city, cityCode);
+                }
+            }
+
+            // 🆕 第二步：使用 adcode 进行精确搜索
+            String url = String.format(
+                    "https://restapi.amap.com/v3/place/text?keywords=%s&city=%s&key=%s&citylimit=true",
+                    //                                                                  ^^^^^^^^^^^^^^^^
+                    //                                                            严格限制在该城市内搜索
+                    URLEncoder.encode(keyword, StandardCharsets.UTF_8),
+                    cityCode,  // ✅ 使用城市编码
+                    amapApiKey
+            );
+
+            log.info("🔍 搜索URL: {}", url);
 
             Map<String, Object> result = restTemplate.getForObject(url, Map.class);
 
             if (result == null || !"1".equals(result.get("status"))) {
-                return "搜索失败";
+                log.warn("⚠️ API返回状态异常: {}", result);
+                return "搜索失败，可能是城市名称错误或API限制";
             }
 
             List<Map<String, Object>> pois = (List<Map<String, Object>>) result.get("pois");
 
             if (pois == null || pois.isEmpty()) {
-                return "未找到相关地点";
+                return String.format("未在 %s 找到与 '%s' 相关的地点", city, keyword);
             }
 
             StringBuilder sb = new StringBuilder();
-            sb.append(String.format("🔍 在 %s 找到 %d 个 '%s' 相关地点：\n\n",
+            sb.append(String.format("🔍 在 %s 找到 %d 个与 '%s' 相关的地点：\n\n",
                     city, Math.min(5, pois.size()), keyword));
 
             // 返回前5个结果
             for (int i = 0; i < Math.min(5, pois.size()); i++) {
                 Map<String, Object> poi = pois.get(i);
-                sb.append(String.format("%d. %s\n   地址：%s\n   电话：%s\n\n",
+
+                // 🆕 提取详细地址信息
+                String name = (String) poi.get("name");
+                String address = (String) poi.get("address");
+                String provinceName = (String) poi.getOrDefault("pname", "");
+                String cityName = (String) poi.getOrDefault("cityname", "");
+                Object tel = poi.get("tel");
+
+                // 拼接完整地址
+                String fullAddress = provinceName + cityName + address;
+
+                sb.append(String.format("%d. **%s**\n   📍 地址：%s\n   📞 电话：%s\n\n",
                         i + 1,
-                        poi.get("name"),
-                        poi.get("address"),
-                        poi.getOrDefault("tel", "无")
+                        name,
+                        fullAddress,
+                        tel
                 ));
             }
 

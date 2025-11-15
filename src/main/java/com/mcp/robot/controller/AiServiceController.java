@@ -48,15 +48,15 @@ public class AiServiceController {
      */
     @GetMapping("/test")
     public String test() {
-        return aiSqlAssistantService.chat("你是谁");
+        return aiSqlAssistantService.chat("test","你是谁");
     }
 
     /**
      * 简单聊天（无记忆）
      */
     @GetMapping
-    public String chat(@RequestParam String userMessage) {
-        return aiSqlAssistantService.chat(userMessage);
+    public String chat(@RequestParam String memoryId, @RequestParam String userMessage) {
+        return aiSqlAssistantService.chat(memoryId, userMessage);
     }
 
     /**

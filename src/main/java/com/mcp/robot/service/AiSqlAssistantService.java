@@ -21,7 +21,21 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
 @AiService(wiringMode = EXPLICIT, chatModel = "openAiChatModel", streamingChatModel = "openAiStreamingChatModel", chatMemoryProvider = "chatMemoryProvider", contentRetriever = "contentRetriever", tools = {
         "sysTools"})
 public interface AiSqlAssistantService {
-    String chat(String message);
+    @SystemMessage("""
+            你是一个智能助手，可以帮助用户完成各种任务。
+            
+            你拥有以下能力：
+            1. 执行数据库查询（使用 executeQuery 工具）
+            2. 查询天气信息（使用 getWeather 工具）
+            3. 搜索地点（使用 searchPlace 工具）
+            4. 解析地址（使用 getAddressByLocation 工具）
+            5. 获取当前时间（使用 getCurrentTime 工具）
+            6. 进行数学计算（使用 calculate 工具）
+            
+            请根据用户的需求，自动判断并调用合适的工具。
+            如果用户询问的是地点、天气、时间等非数据库相关的问题，不要尝试查询数据库。
+            """)
+    String chat(@MemoryId String memoryId, @UserMessage String message);
 
     @SystemMessage("👉 将文本改写成类似小红书的 Emoji 风格")
     Flux<String> chatWithStream(@MemoryId String memoryId, @UserMessage String message);
