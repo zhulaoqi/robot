@@ -1,10 +1,10 @@
 package com.mcp.robot.controller;
 
+import com.mcp.robot.mcp.McpManager;
+import com.mcp.robot.mcp.McpServer;
+import com.mcp.robot.model.McpToolRequest;
 import com.mcp.robot.model.Person;
-import com.mcp.robot.service.AdvancedRagService;
-import com.mcp.robot.service.AgentService;
-import com.mcp.robot.service.AiSqlAssistantService;
-import com.mcp.robot.service.MysqlEmbeddingStore;
+import com.mcp.robot.service.*;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.DocumentSplitter;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
@@ -42,6 +42,8 @@ public class AiServiceController {
     private final AiSqlAssistantService aiSqlAssistantService;
     private final AgentService agentService;
     private final AdvancedRagService advancedRagService;
+    private final PromptManager promptManager;
+    private final McpManager mcpManager;
 
     // ==================== 基础聊天功能 ====================
 
@@ -50,7 +52,7 @@ public class AiServiceController {
      */
     @GetMapping("/test")
     public String test() {
-        return aiSqlAssistantService.chat("test","你是谁");
+        return aiSqlAssistantService.chat("test", "你是谁");
     }
 
     /**
@@ -370,4 +372,71 @@ public class AiServiceController {
         log.info("✅ 成功添加 {} 个知识片段", segments.size());
         return String.format("成功添加业务知识，共 %d 个片段", segments.size());
     }
+
+    // ==================== 📝 Prompt 管理功能 ====================
+
+    /**
+     * 📋 列出所有 Prompt 模板
+     */
+    @GetMapping("/prompts/list")
+    public Map<String, PromptManager.PromptTemplate> listPrompts() {
+        log.info("📋 查询所有 Prompt 模板");
+        return promptManager.listAllPrompts();
+    }
+
+    /**
+     * 📄 获取指定 Prompt 模板
+     */
+    @GetMapping("/prompts/{key}")
+    public String getPrompt(@PathVariable String key) {
+        log.info("📄 获取 Prompt 模板: {}", key);
+        return promptManager.getPrompt(key);
+    }
+
+    /**
+     * ✏️ 更新 Prompt 模板（热更新）
+     */
+    @PutMapping("/prompts/{key}")
+    public String updatePrompt(
+            @PathVariable String key,
+            @RequestParam String content,
+            @RequestParam(defaultValue = "2.0") String version) {
+        log.info("✏️ 更新 Prompt 模板: {} → 版本 {}", key, version);
+        promptManager.updatePrompt(key, content, version);
+        return "Prompt 模板已更新";
+    }
+
+// ==================== 🔌 MCP 管理功能 ====================
+
+    /**
+     * 📋 列出所有 MCP Servers
+     */
+    @GetMapping("/mcp/servers")
+    public List<McpServer.ServerInfo> listMcpServers() {
+        log.info("📋 查询所有 MCP Servers");
+        return mcpManager.listServers();
+    }
+
+    /**
+     * 🛠️ 列出所有可用工具
+     */
+    @GetMapping("/mcp/tools")
+    public Map<String, List<McpServer.Tool>> listAllTools() {
+        log.info("🛠️ 查询所有可用工具");
+        return mcpManager.listAllTools();
+    }
+
+    /**
+     * 🔧 执行 MCP 工具调用
+     */
+    @PostMapping("/mcp/execute")
+    public McpServer.ToolResult executeMcpTool(@RequestBody McpToolRequest request) {
+        log.info("🔧 执行 MCP 工具: {}.{}", request.getServerName(), request.getToolName());
+        return mcpManager.executeTool(
+                request.getServerName(),
+                request.getToolName(),
+                request.getParameters()
+        );
+    }
+
 }
