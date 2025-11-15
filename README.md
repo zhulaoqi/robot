@@ -461,7 +461,7 @@ AI:
 ## 📚 学习资源
 
 - 📖 [Langchain4j 官方文档](https://docs.langchain4j.dev/)
-- 🌐 [通义千问 API 文档](https://help.aliyun.com/zh/dashscope/)
+- 🌐 [通义千问 API 文档](https://bailian.console.aliyun.com/)
 - 🎓 [RAG 技术详解](https://www.pinecone.io/learn/retrieval-augmented-generation/)
 - 📝 [项目详细文档](docs/)
 
@@ -504,9 +504,9 @@ AI:
 
 ## 📧 联系方式
 
-- 📮 Issue: [GitHub Issues](https://github.com/yourusername/langchain4j-robot/issues)
-- 📧 Email: your.email@example.com
-- 💬 讨论区: [GitHub Discussions](https://github.com/yourusername/langchain4j-robot/discussions)
+- 📮 Issue: [GitHub Issues](https://github.com/zhulaoqi/robot/issues)
+- 📧 Email: 1647110340@qq.com
+- 💬 讨论区: [GitHub Discussions](https://github.com/zhulaoqi/robot/discussions)
 
 ---
 
@@ -514,6 +514,6 @@ AI:
 
 **如果觉得项目不错，请点个 ⭐ Star 支持一下！**
 
-Made with ❤️ by [Your Name]
+Made with ❤️ by [小奇]
 
 </div>
