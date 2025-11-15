@@ -1,6 +1,7 @@
 package com.mcp.robot.controller;
 
 import com.mcp.robot.model.Person;
+import com.mcp.robot.service.AgentService;
 import com.mcp.robot.service.AiSqlAssistantService;
 import com.mcp.robot.service.MysqlEmbeddingStore;
 import dev.langchain4j.data.document.Document;
@@ -38,6 +39,7 @@ public class AiServiceController {
     private final EmbeddingModel embeddingModel;
     private final EmbeddingStore<TextSegment> embeddingStore;
     private final AiSqlAssistantService aiSqlAssistantService;
+    private final AgentService agentService;
 
     // ==================== 基础聊天功能 ====================
 
@@ -295,5 +297,25 @@ public class AiServiceController {
             log.error("❌ 加载 DDL 失败", e);
             return "加载失败: " + e.getMessage();
         }
+    }
+
+    // ==================== 🤖 AI Agent 功能 ====================
+
+    /**
+     * 🤖 旅行规划 Agent
+     */
+    @GetMapping("/agent/plan-trip")
+    public String planTrip(@RequestParam String request) {
+        log.info("🤖 Agent任务 - 旅行规划: {}", request);
+        return agentService.planTrip(request);
+    }
+
+    /**
+     * 🤖 数据分析 Agent
+     */
+    @GetMapping("/agent/analyze-data")
+    public String analyzeData(@RequestParam String request) {
+        log.info("🤖 Agent任务 - 数据分析: {}", request);
+        return agentService.analyzeData(request);
     }
 }
