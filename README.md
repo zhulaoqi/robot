@@ -169,8 +169,8 @@ AI 可以自主判断并调用外部工具：
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/yourusername/langchain4j-robot.git
-cd langchain4j-robot
+git clone git@github.com:zhulaoqi/robot.git
+cd robot
 ```
 
 ### 2. 配置数据库
