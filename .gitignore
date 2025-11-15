@@ -1,84 +1,40 @@
-# Maven
+# Maven 编译产物
 target/
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
-pom.xml.next
-release.properties
-dependency-reduced-pom.xml
-buildNumber.properties
-.mvn/timing.properties
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
 
-# IDE
-## IntelliJ IDEA
+# Maven Wrapper
+.mvn/
+mvnw
+mvnw.cmd
+
+# IDE 配置
 .idea/
 *.iws
 *.iml
 *.ipr
-out/
-
-## Eclipse
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-bin/
-
-## NetBeans
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-## VS Code
 .vscode/
-*.code-workspace
+.settings/
+.classpath
+.project
 
-# macOS
+# 系统文件
 .DS_Store
-.AppleDouble
-.LSOverride
-
-# Windows
 Thumbs.db
-ehthumbs.db
-Desktop.ini
 
-# Linux
-*~
-
-# Logs
-logs/
+# 日志文件
 *.log
-*.log.*
+logs/
 
-# Temporary files
+# 临时文件
 *.tmp
-*.temp
 *.swp
-*.swo
-*~.nib
+*~
 
 # Spring Boot
 HELP.md
-application-local.yaml
-application-dev.yaml
 
-# Package Files
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
+# 本地配置（包含敏感信息）
+application-local.yaml
+application-local.yml
