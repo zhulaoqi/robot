@@ -18,9 +18,9 @@ langchain4j:
 
 spring:
   datasource:
-    url: jdbc:mysql://172.30.11.101:3306/langchain_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
-    username: gst
-    password: 12354
+    url: jdbc:mysql://localhost:3306/langchain_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: you_name
+    password: you_password
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 # MyBatis-Plus配置
