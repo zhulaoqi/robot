@@ -108,13 +108,13 @@ public class AiServiceController {
      */
     @PostMapping("/knowledge/add")
     public String addKnowledge(@RequestBody String content) {
-        log.info("📚 添加知识库内容，长度: {}", content.length());
+        log.info("添加知识库内容，长度: {}", content.length());
 
         // 1. 创建文档并分割
         Document document = Document.from(content);
         DocumentSplitter splitter = DocumentSplitters.recursive(500, 50);
         List<TextSegment> segments = splitter.split(document);
-        log.info("📄 文档分割成 {} 个片段", segments.size());
+        log.info("文档分割成 {} 个片段", segments.size());
 
         // 2. 向量化
         Response<List<Embedding>> embedResponse = embeddingModel.embedAll(segments);
@@ -123,7 +123,7 @@ public class AiServiceController {
         // 3. 存入向量库
         embeddingStore.addAll(embeddings, segments);
 
-        log.info("✅ 成功添加 {} 个向量到向量库", embeddings.size());
+        log.info("成功添加 {} 个向量到向量库", embeddings.size());
         return String.format("成功添加 %d 个知识片段", segments.size());
     }
 
@@ -148,7 +148,7 @@ public class AiServiceController {
             totalSegments += segments.size();
         }
 
-        log.info("✅ 批量添加完成，总计 {} 个知识片段", totalSegments);
+        log.info("批量添加完成，总计 {} 个知识片段", totalSegments);
         return String.format("成功添加 %d 条知识，共 %d 个片段", contents.size(), totalSegments);
     }
 
@@ -160,7 +160,7 @@ public class AiServiceController {
      */
     @GetMapping("/knowledge/search")
     public List<String> searchKnowledge(@RequestParam String query) {
-        log.info("🔍 搜索知识库: {}", query);
+        log.info("搜索知识库: {}", query);
 
         // 1. 将查询文本转为向量
         Response<Embedding> queryEmbedding = embeddingModel.embed(query);
@@ -175,7 +175,7 @@ public class AiServiceController {
         // 3. 执行向量检索
         EmbeddingSearchResult<TextSegment> searchResult = embeddingStore.search(searchRequest);
 
-        log.info("📊 找到 {} 个相关结果", searchResult.matches().size());
+        log.info(" 找到 {} 个相关结果", searchResult.matches().size());
 
         // 4. 返回匹配结果
         return searchResult.matches().stream()
@@ -191,7 +191,7 @@ public class AiServiceController {
     @DeleteMapping("/knowledge/clear")
     public String clearKnowledge() {
         embeddingStore.removeAll();
-        log.info("🗑️ 知识库已清空");
+        log.info(" 知识库已清空");
         return "知识库已清空";
     }
 
@@ -203,7 +203,7 @@ public class AiServiceController {
     @DeleteMapping("/knowledge/{embeddingId}")
     public String deleteKnowledge(@PathVariable String embeddingId) {
         embeddingStore.remove(embeddingId);
-        log.info("🗑️ 删除向量: {}", embeddingId);
+        log.info("删除向量: {}", embeddingId);
         return "删除成功: " + embeddingId;
     }
 
@@ -215,7 +215,7 @@ public class AiServiceController {
     @DeleteMapping("/knowledge/batch")
     public String deleteKnowledgeBatch(@RequestBody List<String> embeddingIds) {
         embeddingStore.removeAll(embeddingIds);
-        log.info("🗑️ 批量删除 {} 个向量", embeddingIds.size());
+        log.info(" 批量删除 {} 个向量", embeddingIds.size());
         return String.format("删除成功: %d 个向量", embeddingIds.size());
     }
 
@@ -261,7 +261,7 @@ public class AiServiceController {
     @PostMapping("/knowledge/load-student-ddl")
     public String loadStudentDdl() {
         try {
-            log.info("📚 开始加载学生成绩系统 DDL");
+            log.info("开始加载学生成绩系统 DDL");
 
             // 1. 从 classpath 加载 SQL 文件
             ClassPathResource resource = new ClassPathResource("student_ddl.sql");
@@ -277,7 +277,7 @@ public class AiServiceController {
             );
 
             List<TextSegment> segments = splitter.split(document);
-            log.info("📄 SQL 文档分割成 {} 个片段", segments.size());
+            log.info("SQL 文档分割成 {} 个片段", segments.size());
 
             // 4. 分批向量化（每批最多10个）
             int batchSize = 10;
@@ -287,7 +287,7 @@ public class AiServiceController {
                 int end = Math.min(i + batchSize, segments.size());
                 List<TextSegment> batch = segments.subList(i, end);
 
-                log.info("📊 处理第 {}/{} 批，片段数: {}",
+                log.info("处理第 {}/{} 批，片段数: {}",
                         (i / batchSize + 1),
                         (segments.size() + batchSize - 1) / batchSize,
                         batch.size());
@@ -299,52 +299,52 @@ public class AiServiceController {
             // 5. 存入向量库
             embeddingStore.addAll(allEmbeddings, segments);
 
-            log.info("✅ 成功加载学生成绩系统 DDL，共 {} 个向量", allEmbeddings.size());
+            log.info("成功加载学生成绩系统 DDL，共 {} 个向量", allEmbeddings.size());
             return String.format("成功加载学生成绩系统 DDL，共 %d 个片段", segments.size());
 
         } catch (Exception e) {
-            log.error("❌ 加载 DDL 失败", e);
+            log.error("加载 DDL 失败", e);
             return "加载失败: " + e.getMessage();
         }
     }
 
-    // ==================== 🤖 AI Agent 功能 ====================
+    // ==================== AI Agent 功能 ====================
 
     /**
      * 🤖 旅行规划 Agent
      */
     @GetMapping("/agent/plan-trip")
     public String planTrip(@RequestParam String request) {
-        log.info("🤖 [旅行规划Agent] 请求: {}", request);
+        log.info("[旅行规划Agent] 请求: {}", request);
         return agentService.planTrip(request);
     }
 
     /**
-     * 🤖 数据分析 Agent
+     * 数据分析 Agent
      */
     @GetMapping("/agent/analyze-data")
     public String analyzeData(@RequestParam String request) {
-        log.info("🤖 [数据分析Agent] 请求: {}", request);
+        log.info(" [数据分析Agent] 请求: {}", request);
         return agentService.analyzeData(request);
     }
 
     /**
-     * 🤖 综合助手 Agent
+     * 综合助手 Agent
      */
     @GetMapping("/agent/general")
     public String generalAssist(@RequestParam String request) {
-        log.info("🤖 [综合助手Agent] 请求: {}", request);
+        log.info(" [综合助手Agent] 请求: {}", request);
         return agentService.generalAssist(request);
     }
 
-// ==================== 📊 知识库管理（用于测试）====================
+// ====================  知识库管理（用于测试）====================
 
     /**
-     * 📝 添加业务知识到知识库
+     * 添加业务知识到知识库
      */
     @PostMapping("/rag/add-business-knowledge")
     public String addBusinessKnowledge(@RequestBody String knowledge) {
-        log.info("📝 添加业务知识，长度: {}", knowledge.length());
+        log.info("添加业务知识，长度: {}", knowledge.length());
 
         // 复用现有的 addKnowledge 逻辑
         Document document = Document.from(knowledge);
@@ -354,39 +354,39 @@ public class AiServiceController {
         Response<List<Embedding>> embedResponse = embeddingModel.embedAll(segments);
         embeddingStore.addAll(embedResponse.content(), segments);
 
-        log.info("✅ 成功添加 {} 个知识片段", segments.size());
+        log.info("成功添加 {} 个知识片段", segments.size());
         return String.format("成功添加业务知识，共 %d 个片段", segments.size());
     }
 
-    // ==================== 📝 Prompt 管理功能 ====================
+    // ====================  Prompt 管理功能 ====================
 
     /**
-     * 📋 列出所有 Prompt 模板
+     * 列出所有 Prompt 模板
      */
     @GetMapping("/prompts/list")
     public Map<String, PromptManager.PromptTemplate> listPrompts() {
-        log.info("📋 查询所有 Prompt 模板");
+        log.info(" 查询所有 Prompt 模板");
         return promptManager.listAllPrompts();
     }
 
     /**
-     * 📄 获取指定 Prompt 模板
+     * 获取指定 Prompt 模板
      */
     @GetMapping("/prompts/{key}")
     public String getPrompt(@PathVariable String key) {
-        log.info("📄 获取 Prompt 模板: {}", key);
+        log.info(" 获取 Prompt 模板: {}", key);
         return promptManager.getPrompt(key);
     }
 
     /**
-     * ✏️ 更新 Prompt 模板（热更新）
+     * 更新 Prompt 模板（热更新）
      */
     @PutMapping("/prompts/{key}")
     public String updatePrompt(
             @PathVariable String key,
             @RequestParam String content,
             @RequestParam(defaultValue = "2.0") String version) {
-        log.info("✏️ 更新 Prompt 模板: {} → 版本 {}", key, version);
+        log.info(" 更新 Prompt 模板: {} → 版本 {}", key, version);
         promptManager.updatePrompt(key, content, version);
         return "Prompt 模板已更新";
     }
@@ -394,11 +394,11 @@ public class AiServiceController {
 // ==================== 🔌 MCP 管理功能 ====================
 
     /**
-     * 📋 列出所有 MCP Servers
+     * 列出所有 MCP Servers
      */
     @GetMapping("/mcp/servers")
     public List<McpServer.ServerInfo> listMcpServers() {
-        log.info("📋 查询所有 MCP Servers");
+        log.info(" 查询所有 MCP Servers");
         return mcpManager.listServers();
     }
 
@@ -427,7 +427,7 @@ public class AiServiceController {
 // ====================  MCP 智能调度功能 ====================
 
     /**
-     *  MCP 智能助手
+     * MCP 智能助手
      */
     @GetMapping("/mcp/chat")
     public String mcpChat(
@@ -438,7 +438,7 @@ public class AiServiceController {
     }
 
     /**
-     *  MCP 工具调度演示
+     * MCP 工具调度演示
      */
     @GetMapping("/mcp/demo")
     public Map<String, Object> mcpDemo() {
@@ -481,14 +481,14 @@ public class AiServiceController {
         );
     }
 
-    // ==================== 🔍 查询转换功能 ====================
+    // ==================== 查询转换功能 ====================
 
     /**
-     * 🔍 查询扩展
+     * 查询扩展
      */
     @GetMapping("/query/expand")
     public Map<String, String> expandQuery(@RequestParam String query) {
-        log.info("🔍 [查询扩展] 原始查询: {}", query);
+        log.info(" [查询扩展] 原始查询: {}", query);
 
         long startTime = System.currentTimeMillis();
         String expanded = queryTransformService.expandQuery(query);
@@ -506,11 +506,11 @@ public class AiServiceController {
     }
 
     /**
-     * 🔍 SQL 查询重写
+     * SQL 查询重写
      */
     @GetMapping("/query/rewrite-sql")
     public Map<String, String> rewriteForSql(@RequestParam String query) {
-        log.info("🔍 [SQL查询重写] 原始查询: {}", query);
+        log.info(" [SQL查询重写] 原始查询: {}", query);
 
         long startTime = System.currentTimeMillis();
         String rewritten = queryTransformService.rewriteForSql(query);
@@ -527,11 +527,11 @@ public class AiServiceController {
     }
 
     /**
-     * 🔍 生成多个查询视角
+     * 生成多个查询视角
      */
     @GetMapping("/query/multi-perspective")
     public Map<String, Object> generateMultiQueries(@RequestParam String query) {
-        log.info("🔍 [多视角查询] 原始查询: {}", query);
+        log.info(" [多视角查询] 原始查询: {}", query);
 
         long startTime = System.currentTimeMillis();
         List<String> multiQueries = queryTransformService.generateMultiQueries(query);
@@ -568,20 +568,20 @@ public class AiServiceController {
         );
     }
 
-// ==================== 📚 高级 RAG 功能 ====================
+// ====================  高级 RAG 功能 ====================
 
     /**
-     * 📚 带查询改写的 RAG
+     * 带查询改写的 RAG
      */
     @GetMapping("/rag/with-query-transform")
     public Map<String, Object> ragWithQueryTransform(@RequestParam String query) {
-        log.info("📚 [查询改写RAG] 原始查询: {}", query);
+        log.info("[查询改写RAG] 原始查询: {}", query);
 
         long startTime = System.currentTimeMillis();
         String answer = advancedRagService.chatWithQueryTransform(query);
         long duration = System.currentTimeMillis() - startTime;
 
-        log.info("✅ RAG 回答生成完成");
+        log.info(" RAG 回答生成完成");
 
         return Map.of(
                 "query", query,
@@ -591,17 +591,17 @@ public class AiServiceController {
     }
 
     /**
-     * 📚 多查询 RAG
+     * 多查询 RAG
      */
     @GetMapping("/rag/with-multi-query")
     public Map<String, Object> ragWithMultiQuery(@RequestParam String query) {
-        log.info("📚 [多查询RAG] 原始查询: {}", query);
+        log.info("[多查询RAG] 原始查询: {}", query);
 
         long startTime = System.currentTimeMillis();
         String answer = advancedRagService.chatWithMultiQuery(query);
         long duration = System.currentTimeMillis() - startTime;
 
-        log.info("✅ RAG 回答生成完成");
+        log.info(" RAG 回答生成完成");
 
         return Map.of(
                 "query", query,
@@ -611,11 +611,11 @@ public class AiServiceController {
     }
 
     /**
-     * 📊 RAG 对比测试：基础 vs 查询改写 vs 多查询
+     * RAG 对比测试：基础 vs 查询改写 vs 多查询
      */
     @GetMapping("/rag/compare-all")
     public Map<String, Object> compareAllRagMethods(@RequestParam String query) {
-        log.info("📊 [RAG全对比] 查询: {}", query);
+        log.info("[RAG全对比] 查询: {}", query);
 
         // 1. 基础 RAG（不改写查询）
         long basicStart = System.currentTimeMillis();
@@ -675,11 +675,11 @@ public class AiServiceController {
     }
 
     /**
-     * 🧪 完整的 RAG 流程演示（带详细步骤）
+     * 完整的 RAG 流程演示（带详细步骤）
      */
     @GetMapping("/rag/demo-full-process")
     public Map<String, Object> demoFullRagProcess(@RequestParam String query) {
-        log.info("🧪 [完整RAG演示] 查询: {}", query);
+        log.info("[完整RAG演示] 查询: {}", query);
 
         List<Map<String, Object>> steps = new ArrayList<>();
 
