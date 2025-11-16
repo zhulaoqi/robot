@@ -1169,5 +1169,5 @@ PUT /ai/chat/prompts/{key}?content={content}&version={version}
 ---
 
 **文档版本**: v1.0  
-**最后更新**: 2024-01-15
+**最后更新**: 2025-11-16
 
