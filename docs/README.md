@@ -160,5 +160,5 @@ DELETE FROM chat_memory WHERE created_time < DATE_SUB(NOW(), INTERVAL 30 DAY);
 ---
 
 **文档版本**: v1.0  
-**最后更新**: 2024-01-15
+**最后更新**: 2024-11-15
 
