@@ -16,7 +16,7 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
 public interface VisionService {
 
     /**
-     * 🖼️ 图片分析
+     * 图片分析
      */
     @UserMessage("""
             请分析这张图片的内容：

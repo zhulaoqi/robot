@@ -25,7 +25,7 @@ public class McpManager {
     public void registerServer(McpServer server) {
         McpServer.ServerInfo info = server.getServerInfo();
         servers.put(info.getName(), server);
-        log.info("✅ 注册 MCP Server: {} (版本: {})", info.getName(), info.getVersion());
+        log.info(" 注册 MCP Server: {} (版本: {})", info.getName(), info.getVersion());
     }
 
     /**

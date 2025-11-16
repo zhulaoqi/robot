@@ -19,7 +19,7 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
 public interface AgentService {
 
     /**
-     * 🤖 旅行规划 Agent
+     * 旅行规划 Agent
      * 自动查询天气、搜索景点、推荐路线
      */
     @SystemMessage("""
@@ -40,7 +40,7 @@ public interface AgentService {
     String planTrip(@UserMessage String request);
 
     /**
-     * 🤖 数据分析 Agent
+     * 数据分析 Agent
      * 自动查询数据库、计算统计、生成报告
      */
     @SystemMessage("""
@@ -58,7 +58,7 @@ public interface AgentService {
     String analyzeData(@UserMessage String request);
 
     /**
-     * 🤖 综合助手 Agent
+     * 综合助手 Agent
      * 根据用户需求自动选择合适的工具和策略
      */
     @SystemMessage("""

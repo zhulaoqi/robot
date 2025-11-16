@@ -19,7 +19,8 @@
 
 ## 📖 项目简介
 
-这是一个基于 **Langchain4j** 框架和 **阿里云通义千问** 大模型构建的智能对话机器人系统。项目展示了如何在 Spring Boot 应用中集成先进的 AI 能力，实现企业级的对话系统。
+这是一个基于 **Langchain4j** 框架和 **阿里云通义千问** 大模型构建的智能对话机器人系统。项目展示了如何在 Spring Boot
+应用中集成先进的 AI 能力，实现企业级的对话系统。
 
 ### ✨ 核心亮点
 
@@ -46,11 +47,11 @@
 
 ### 1️⃣ 多模式对话
 
-| 模式 | 特性 | 场景 |
-|-----|------|------|
-| **基础对话** | 无状态、快速响应 | 简单问答 |
-| **流式对话** | 实时输出、带记忆 | 长文本生成 |
-| **RAG 对话** | 知识库增强 | 专业领域咨询 |
+| 模式         | 特性       | 场景     |
+|------------|----------|--------|
+| **基础对话**   | 无状态、快速响应 | 简单问答   |
+| **流式对话**   | 实时输出、带记忆 | 长文本生成  |
+| **RAG 对话** | 知识库增强    | 专业领域咨询 |
 
 ### 2️⃣ RAG 检索增强生成
 
@@ -124,9 +125,9 @@ AI 可以自主判断并调用外部工具：
 ### AI 能力
 
 - **阿里云通义千问**
-  - `qwen-plus` - 对话生成模型
-  - `text-embedding-v4` - 向量化模型 (1536维)
-  - `qwen-vl-plus` - 多模态视觉模型
+    - `qwen-plus` - 对话生成模型
+    - `text-embedding-v4` - 向量化模型 (1536维)
+    - `qwen-vl-plus` - 多模态视觉模型
 
 ### 数据存储
 
@@ -480,11 +481,11 @@ ContentRetriever retriever = EmbeddingStoreContentRetriever.builder()
 
 ### 性能优化建议
 
-| 场景 | 配置建议 |
-|-----|---------|
-| 提高检索准确性 | `minScore: 0.3`, `maxResults: 15` |
+| 场景          | 配置建议                              |
+|-------------|-----------------------------------|
+| 提高检索准确性     | `minScore: 0.3`, `maxResults: 15` |
 | 降低 Token 消耗 | `maxMessages: 3`, `maxResults: 5` |
-| 处理长文档 | `chunkSize: 1000`, `overlap: 150` |
+| 处理长文档       | `chunkSize: 1000`, `overlap: 150` |
 
 ---
 
@@ -540,12 +541,14 @@ robot/
 支持跨语言工具调用：
 
 **架构优势**：
+
 - ✅ Java 主服务 + Python 工具服务独立部署
 - ✅ HTTP 通信，易于横向扩展
 - ✅ AI 自动判断调用哪个工具（Java 或 Python）
 - ✅ 支持动态工具发现和注册
 
 **可用工具**：
+
 - `calculator` - 复杂数学计算（支持三角函数、开方等）
 - `getPythonTime` - 格式化时间获取
 - `readFile` / `writeFile` - 文件操作
@@ -555,12 +558,14 @@ robot/
 集中管理所有 AI 提示词：
 
 **核心功能**：
+
 - 📝 统一存储：所有 Prompt 集中管理
 - 🔄 热更新：无需重启即可修改
 - 📊 版本控制：支持 Prompt 历史追踪
 - 🎯 场景预置：SQL 专家、旅行规划、数据分析等
 
 **使用场景**：
+
 - A/B 测试不同 Prompt 效果
 - 生产环境快速修复 AI 行为
 - 多租户/多场景 Prompt 隔离
@@ -594,6 +599,7 @@ AI:
 <summary><strong>Q: 为什么用 MySQL 存储向量而不是专业向量数据库？</strong></summary>
 
 **A**: 本项目是学习项目，MySQL 方案：
+
 - ✅ 零额外部署成本
 - ✅ 适合小规模数据（< 10000 条）
 - ✅ 便于理解向量检索原理
@@ -604,32 +610,38 @@ AI:
 <details>
 <summary><strong>Q: 如何提高 Text-to-SQL 的准确性？</strong></summary>
 
-**A**: 
+**A**:
+
 1. 添加课程名称映射知识（处理简称问题）
 2. 使用 LIKE 模糊匹配代替精确匹配
 3. 优化系统提示词，提供 SQL 示例
 4. 降低检索阈值到 0.3，增加 maxResults 到 10
+
 </details>
 
 <details>
 <summary><strong>Q: MCP Server 启动失败怎么办？</strong></summary>
 
 **A**:
+
 1. 确认 Python 3.8+ 已安装
 2. 安装 Flask: `pip3 install flask`
 3. 检查端口 5000 是否被占用: `lsof -i :5000`
 4. 查看 MCP Server 日志排查错误
 5. 不使用 MCP 功能也不影响主服务运行
+
 </details>
 
 <details>
 <summary><strong>Q: 如何添加自定义 MCP 工具？</strong></summary>
 
 **A**:
+
 1. 在 `docs/mcp_server_http.py` 中添加新工具函数
 2. 在 `McpToolProvider.java` 中添加对应的 `@Tool` 方法
 3. 重启 MCP Server 和 Java 应用
 4. AI 即可自动调用新工具
+
 </details>
 
 ---

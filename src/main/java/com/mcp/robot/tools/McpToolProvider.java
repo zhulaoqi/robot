@@ -38,16 +38,16 @@ public class McpToolProvider {
             """)
     public String calculator(@P("数学表达式") String expression) {
         log.info("[MCP工具] 调用计算器: {}", expression);
-        
+
         Map<String, Object> params = new HashMap<>();
         params.put("expression", expression);
-        
+
         McpServer.ToolResult result = mcpManager.executeTool(
-            "python-mcp-server", 
-            "calculator", 
-            params
+                "python-mcp-server",
+                "calculator",
+                params
         );
-        
+
         if (result.isSuccess()) {
             McpServer.SuccessResult successResult = (McpServer.SuccessResult) result;
             return successResult.getContent();
@@ -58,7 +58,7 @@ public class McpToolProvider {
     }
 
     /**
-     * 🕐 获取当前时间（Python实现）
+     * 获取当前时间（Python实现）
      */
     @Tool("""
             获取当前系统时间。
@@ -71,18 +71,18 @@ public class McpToolProvider {
             """)
     public String getPythonTime(@P("时间格式，可选") String format) {
         log.info("[MCP工具] 获取时间，格式: {}", format);
-        
+
         Map<String, Object> params = new HashMap<>();
         if (format != null && !format.isEmpty()) {
             params.put("format", format);
         }
-        
+
         McpServer.ToolResult result = mcpManager.executeTool(
-            "python-mcp-server", 
-            "get_time", 
-            params
+                "python-mcp-server",
+                "get_time",
+                params
         );
-        
+
         if (result.isSuccess()) {
             McpServer.SuccessResult successResult = (McpServer.SuccessResult) result;
             return successResult.getContent();
@@ -104,16 +104,16 @@ public class McpToolProvider {
             """)
     public String readFile(@P("文件路径") String path) {
         log.info("[MCP工具] 读取文件: {}", path);
-        
+
         Map<String, Object> params = new HashMap<>();
         params.put("path", path);
-        
+
         McpServer.ToolResult result = mcpManager.executeTool(
-            "python-mcp-server", 
-            "read_file", 
-            params
+                "python-mcp-server",
+                "read_file",
+                params
         );
-        
+
         if (result.isSuccess()) {
             McpServer.SuccessResult successResult = (McpServer.SuccessResult) result;
             return successResult.getContent();
@@ -138,17 +138,17 @@ public class McpToolProvider {
             @P("文件路径") String path,
             @P("文件内容") String content) {
         log.info("[MCP工具] 写入文件: {}", path);
-        
+
         Map<String, Object> params = new HashMap<>();
         params.put("path", path);
         params.put("content", content);
-        
+
         McpServer.ToolResult result = mcpManager.executeTool(
-            "python-mcp-server", 
-            "write_file", 
-            params
+                "python-mcp-server",
+                "write_file",
+                params
         );
-        
+
         if (result.isSuccess()) {
             McpServer.SuccessResult successResult = (McpServer.SuccessResult) result;
             return successResult.getContent();

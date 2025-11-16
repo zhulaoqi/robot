@@ -147,7 +147,7 @@ public class PromptManager {
                 .build();
 
         templates.put(key, newTemplate);
-        log.info("🔄 更新 Prompt 模板: {} (版本: {} → {})",
+        log.info("更新 Prompt 模板: {} (版本: {} → {})",
                 oldTemplate.getName(), oldTemplate.getVersion(), newVersion);
     }
 

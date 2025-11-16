@@ -68,11 +68,11 @@ public class SysTools {
             String jsonResult = objectMapper.writerWithDefaultPrettyPrinter()
                     .writeValueAsString(results);
 
-            log.info("✅ SQL执行成功，返回 {} 条记录", results.size());
+            log.info(" SQL执行成功，返回 {} 条记录", results.size());
             return String.format("查询成功，共 %d 条记录：\n%s", results.size(), jsonResult);
 
         } catch (Exception e) {
-            log.error("❌ SQL执行失败: {}", sql, e);
+            log.error(" SQL执行失败: {}", sql, e);
             return "SQL执行失败: " + e.getMessage();
         }
     }
@@ -95,10 +95,10 @@ public class SysTools {
         return "000";
     }
 
-    // ==================== 🆕 新增：外部 API 工具 ====================
+    // ==================== 新增：外部 API 工具 ====================
 
     /**
-     * 🌤️ 查询城市天气（使用高德天气 API）
+     * 查询城市天气（使用高德天气 API）
      * 免费申请：https://lbs.amap.com/api/webservice/guide/api/weatherinfo
      */
     @Tool("""
@@ -154,7 +154,7 @@ public class SysTools {
             Map<String, Object> weather = lives.get(0);
 
             String result = String.format("""
-                            🌤️ %s 实时天气：
+                             %s 实时天气：
                             - 天气：%s
                             - 温度：%s℃
                             - 风向：%s
@@ -171,17 +171,17 @@ public class SysTools {
                     weather.get("reporttime")
             );
 
-            log.info("✅ 天气查询成功: {}", city);
+            log.info(" 天气查询成功: {}", city);
             return result;
 
         } catch (Exception e) {
-            log.error("❌ 天气查询失败: {}", city, e);
+            log.error(" 天气查询失败: {}", city, e);
             return "天气查询出错: " + e.getMessage();
         }
     }
 
     /**
-     * 📍 地址解析（经纬度转地址）
+     * 地址解析（经纬度转地址）
      */
     @Tool("""
             将经纬度坐标转换为详细地址。
@@ -193,7 +193,7 @@ public class SysTools {
     public String getAddressByLocation(
             @P("经度") double longitude,
             @P("纬度") double latitude) {
-        log.info("🔧 Tool调用 - 地址解析: {},{}", longitude, latitude);
+        log.info(" Tool调用 - 地址解析: {},{}", longitude, latitude);
 
         try {
 
@@ -211,11 +211,11 @@ public class SysTools {
             Map<String, Object> regeocode = (Map<String, Object>) result.get("regeocode");
             String formattedAddress = (String) regeocode.get("formatted_address");
 
-            log.info("✅ 地址解析成功: {}", formattedAddress);
-            return "📍 该位置的地址是：" + formattedAddress;
+            log.info("地址解析成功: {}", formattedAddress);
+            return "该位置的地址是：" + formattedAddress;
 
         } catch (Exception e) {
-            log.error("❌ 地址解析失败", e);
+            log.error("地址解析失败", e);
             return "地址解析出错: " + e.getMessage();
         }
     }
@@ -233,10 +233,10 @@ public class SysTools {
     public String searchPlace(
             @P("搜索关键词") String keyword,
             @P("城市名称") String city) {
-        log.info("🔧 Tool调用 - 搜索地点: {} in {}", keyword, city);
+        log.info("Tool调用 - 搜索地点: {} in {}", keyword, city);
 
         try {
-            // 🆕 第一步：先获取城市的 adcode（城市编码）
+            //  第一步：先获取城市的 adcode（城市编码）
             String geocodeUrl = String.format(
                     "https://restapi.amap.com/v3/geocode/geo?address=%s&key=%s",
                     city,
@@ -251,17 +251,17 @@ public class SysTools {
                 List<Map<String, Object>> geocodes = (List<Map<String, Object>>) geocodeResult.get("geocodes");
                 if (geocodes != null && !geocodes.isEmpty()) {
                     cityCode = (String) geocodes.get(0).get("adcode");
-                    log.info("📍 城市编码: {} -> {}", city, cityCode);
+                    log.info(" 城市编码: {} -> {}", city, cityCode);
                 }
             }
 
-            // 🆕 第二步：使用 adcode 进行精确搜索
+            // 第二步：使用 adcode 进行精确搜索
             String url = String.format(
                     "https://restapi.amap.com/v3/place/text?keywords=%s&city=%s&key=%s&citylimit=true",
                     //                                                                  ^^^^^^^^^^^^^^^^
                     //                                                            严格限制在该城市内搜索
                     URLEncoder.encode(keyword, StandardCharsets.UTF_8),
-                    cityCode,  // ✅ 使用城市编码
+                    cityCode,  // 使用城市编码
                     amapApiKey
             );
 
@@ -270,7 +270,7 @@ public class SysTools {
             Map<String, Object> result = restTemplate.getForObject(url, Map.class);
 
             if (result == null || !"1".equals(result.get("status"))) {
-                log.warn("⚠️ API返回状态异常: {}", result);
+                log.warn("API返回状态异常: {}", result);
                 return "搜索失败，可能是城市名称错误或API限制";
             }
 
@@ -281,14 +281,14 @@ public class SysTools {
             }
 
             StringBuilder sb = new StringBuilder();
-            sb.append(String.format("🔍 在 %s 找到 %d 个与 '%s' 相关的地点：\n\n",
+            sb.append(String.format("在 %s 找到 %d 个与 '%s' 相关的地点：\n\n",
                     city, Math.min(5, pois.size()), keyword));
 
             // 返回前5个结果
             for (int i = 0; i < Math.min(5, pois.size()); i++) {
                 Map<String, Object> poi = pois.get(i);
 
-                // 🆕 提取详细地址信息
+                // 提取详细地址信息
                 String name = (String) poi.get("name");
                 String address = (String) poi.get("address");
                 String provinceName = (String) poi.getOrDefault("pname", "");
@@ -298,7 +298,7 @@ public class SysTools {
                 // 拼接完整地址
                 String fullAddress = provinceName + cityName + address;
 
-                sb.append(String.format("%d. **%s**\n   📍 地址：%s\n   📞 电话：%s\n\n",
+                sb.append(String.format("%d. **%s**\n    地址：%s\n   📞 电话：%s\n\n",
                         i + 1,
                         name,
                         fullAddress,
@@ -306,28 +306,28 @@ public class SysTools {
                 ));
             }
 
-            log.info("✅ 搜索成功: {} 个结果", pois.size());
+            log.info(" 搜索成功: {} 个结果", pois.size());
             return sb.toString();
 
         } catch (Exception e) {
-            log.error("❌ 搜索失败", e);
+            log.error(" 搜索失败", e);
             return "搜索出错: " + e.getMessage();
         }
     }
 
     /**
-     * 🕐 获取当前时间
+     * 获取当前时间
      */
     @Tool("获取当前的日期和时间")
     public String getCurrentTime() {
         log.info("🔧 Tool调用 - 获取当前时间");
         LocalDateTime now = LocalDateTime.now();
         String formatted = now.format(DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm:ss E"));
-        return "📅 当前时间：" + formatted;
+        return "当前时间：" + formatted;
     }
 
     /**
-     * 🧮 计算器
+     * 计算器
      */
     @Tool("""
             执行数学计算。
@@ -344,10 +344,10 @@ public class SysTools {
             javax.script.ScriptEngine engine = manager.getEngineByName("JavaScript");
             Object result = engine.eval(expression);
 
-            return String.format("🧮 %s = %s", expression, result);
+            return String.format(" %s = %s", expression, result);
 
         } catch (Exception e) {
-            log.error("❌ 计算失败: {}", expression, e);
+            log.error(" 计算失败: {}", expression, e);
             return "计算出错: " + e.getMessage();
         }
     }

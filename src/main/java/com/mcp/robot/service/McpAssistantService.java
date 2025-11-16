@@ -12,26 +12,26 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
  * AI 可以自动调用 Java 工具 + Python MCP 工具
  */
 @AiService(
-    wiringMode = EXPLICIT,
-    chatModel = "openAiChatModel",
-    chatMemoryProvider = "chatMemoryProvider",
-    tools = {"sysTools", "mcpToolProvider"}
+        wiringMode = EXPLICIT,
+        chatModel = "openAiChatModel",
+        chatMemoryProvider = "chatMemoryProvider",
+        tools = {"sysTools", "mcpToolProvider"}
 )
 public interface McpAssistantService {
 
     @SystemMessage("""
             你是一个超级智能助手，拥有丰富的工具集来帮助用户。
             
-            📊 **数据库工具**（Java实现）：
+             **数据库工具**（Java实现）：
             - executeQuery: 执行 SQL 查询
             
-            🌍 **外部 API 工具**（Java实现）：
+            **外部 API 工具**（Java实现）：
             - getWeather: 查询天气
             - searchPlace: 搜索地点
             - getAddressByLocation: 解析地址
             - getCurrentTime: 获取 Java 系统时间
             
-            🐍 **Python MCP 工具**：
+            **Python MCP 工具**：
             - calculator: 强大的数学计算器（支持复杂表达式、三角函数、开方等）
             - getPythonTime: 获取 Python 系统时间（支持自定义格式）
             - readFile: 读取文件内容

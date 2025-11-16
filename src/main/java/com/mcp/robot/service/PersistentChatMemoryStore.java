@@ -33,7 +33,7 @@ public class PersistentChatMemoryStore implements ChatMemoryStore {
     @Override
     public List<ChatMessage> getMessages(Object memoryId) {
         String memoryIdStr = memoryId.toString();
-        log.info("📖 获取会话记录, memoryId: {}", memoryIdStr);
+        log.info("获取会话记录, memoryId: {}", memoryIdStr);
 
         // 使用 MyBatis-Plus 的 LambdaQueryWrapper 查询
         LambdaQueryWrapper<ChatMemoryEntity> queryWrapper = Wrappers.lambdaQuery();
@@ -41,7 +41,7 @@ public class PersistentChatMemoryStore implements ChatMemoryStore {
                 .orderByAsc(ChatMemoryEntity::getCreatedTime);
 
         List<ChatMemoryEntity> entities = chatMemoryMapper.selectList(queryWrapper);
-        log.info("📖 查询到 {} 条历史消息", entities.size());
+        log.info("查询到 {} 条历史消息", entities.size());
 
         // 反序列化为 ChatMessage 对象
         return entities.stream()
@@ -49,7 +49,7 @@ public class PersistentChatMemoryStore implements ChatMemoryStore {
                     try {
                         return ChatMessageDeserializer.messageFromJson(entity.getMessageText());
                     } catch (Exception e) {
-                        log.error("❌ 反序列化消息失败: {}", entity.getMessageText(), e);
+                        log.error("反序列化消息失败: {}", entity.getMessageText(), e);
                         return null;
                     }
                 })
@@ -66,7 +66,7 @@ public class PersistentChatMemoryStore implements ChatMemoryStore {
         String memoryIdStr = memoryId.toString();
 
         if (messages == null || messages.isEmpty()) {
-            log.warn("⚠️ 消息列表为空, memoryId: {}", memoryIdStr);
+            log.warn(" 消息列表为空, memoryId: {}", memoryIdStr);
             return;
         }
 
@@ -81,7 +81,7 @@ public class PersistentChatMemoryStore implements ChatMemoryStore {
 
         chatMemoryMapper.insert(entity);
 
-        log.info("💾 保存消息成功, memoryId: {}, type: {}", memoryIdStr, lastMessage.type());
+        log.info("保存消息成功, memoryId: {}, type: {}", memoryIdStr, lastMessage.type());
     }
 
     /**
@@ -91,12 +91,12 @@ public class PersistentChatMemoryStore implements ChatMemoryStore {
     @Transactional(rollbackFor = Exception.class)
     public void deleteMessages(Object memoryId) {
         String memoryIdStr = memoryId.toString();
-        log.info("🗑️ 删除会话记录, memoryId: {}", memoryIdStr);
+        log.info("删除会话记录, memoryId: {}", memoryIdStr);
 
         LambdaQueryWrapper<ChatMemoryEntity> queryWrapper = Wrappers.lambdaQuery();
         queryWrapper.eq(ChatMemoryEntity::getMemoryId, memoryIdStr);
 
         int deletedCount = chatMemoryMapper.delete(queryWrapper);
-        log.info("🗑️ 删除了 {} 条消息", deletedCount);
+        log.info("删除了 {} 条消息", deletedCount);
     }
 }

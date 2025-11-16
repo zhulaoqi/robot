@@ -36,6 +36,7 @@ GET /ai/chat/test
 ```
 
 **状态码**
+
 - `200 OK` - 成功
 
 ---
@@ -52,10 +53,10 @@ GET /ai/chat?memoryId={memoryId}&userMessage={message}
 
 **参数**
 
-| 参数 | 类型 | 必填 | 说明 |
-|-----|------|------|------|
-| `memoryId` | string | 是 | 会话ID，相同ID的对话会保留上下文 |
-| `userMessage` | string | 是 | 用户消息内容 |
+| 参数            | 类型     | 必填 | 说明                 |
+|---------------|--------|----|--------------------|
+| `memoryId`    | string | 是  | 会话ID，相同ID的对话会保留上下文 |
+| `userMessage` | string | 是  | 用户消息内容             |
 
 **响应示例**
 
@@ -85,10 +86,10 @@ GET /ai/chat/{memoryId}/stream/memory?userMessage={message}
 
 **参数**
 
-| 参数 | 类型 | 必填 | 说明 |
-|-----|------|------|------|
-| `memoryId` | string | 是 | 会话ID（路径参数） |
-| `userMessage` | string | 是 | 用户消息内容 |
+| 参数            | 类型     | 必填 | 说明         |
+|---------------|--------|----|------------|
+| `memoryId`    | string | 是  | 会话ID（路径参数） |
+| `userMessage` | string | 是  | 用户消息内容     |
 
 **响应类型**
 
@@ -132,9 +133,9 @@ GET /ai/chat/extract/person?userMessage={text}
 
 **参数**
 
-| 参数 | 类型 | 必填 | 说明 |
-|-----|------|------|------|
-| `userMessage` | string | 是 | 包含人员信息的文本 |
+| 参数            | 类型     | 必填 | 说明        |
+|---------------|--------|----|-----------|
+| `userMessage` | string | 是  | 包含人员信息的文本 |
 
 **响应示例**
 
@@ -168,9 +169,9 @@ GET /ai/chat/mock/username?total={count}
 
 **参数**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-|-----|------|------|-------|------|
-| `total` | integer | 否 | 0 | 生成数量 |
+| 参数      | 类型      | 必填 | 默认值 | 说明   |
+|---------|---------|----|-----|------|
+| `total` | integer | 否  | 0   | 生成数量 |
 
 **响应示例**
 
@@ -262,9 +263,9 @@ GET /ai/chat/knowledge/search?query={query}
 
 **参数**
 
-| 参数 | 类型 | 必填 | 说明 |
-|-----|------|------|------|
-| `query` | string | 是 | 查询文本 |
+| 参数      | 类型     | 必填 | 说明   |
+|---------|--------|----|------|
+| `query` | string | 是  | 查询文本 |
 
 **响应示例**
 
@@ -340,9 +341,9 @@ DELETE /ai/chat/knowledge/{embeddingId}
 
 **参数**
 
-| 参数 | 类型 | 必填 | 说明 |
-|-----|------|------|------|
-| `embeddingId` | string | 是 | 向量ID（路径参数） |
+| 参数            | 类型     | 必填 | 说明         |
+|---------------|--------|----|------------|
+| `embeddingId` | string | 是  | 向量ID（路径参数） |
 
 **响应示例**
 
@@ -413,10 +414,10 @@ GET /ai/chat/{memoryId}/sql/generate?userMessage={query}
 
 **参数**
 
-| 参数 | 类型 | 必填 | 说明 |
-|-----|------|------|------|
-| `memoryId` | string | 是 | 会话ID（路径参数） |
-| `userMessage` | string | 是 | 自然语言查询 |
+| 参数            | 类型     | 必填 | 说明         |
+|---------------|--------|----|------------|
+| `memoryId`    | string | 是  | 会话ID（路径参数） |
+| `userMessage` | string | 是  | 自然语言查询     |
 
 **响应示例**
 
@@ -454,9 +455,9 @@ GET /ai/chat/query/expand?query={query}
 
 **参数**
 
-| 参数 | 类型 | 必填 | 说明 |
-|-----|------|------|------|
-| `query` | string | 是 | 原始查询 |
+| 参数      | 类型     | 必填 | 说明   |
+|---------|--------|----|------|
+| `query` | string | 是  | 原始查询 |
 
 **响应示例**
 
@@ -688,9 +689,9 @@ GET /ai/chat/agent/plan-trip?request={request}
 
 **参数**
 
-| 参数 | 类型 | 必填 | 说明 |
-|-----|------|------|------|
-| `request` | string | 是 | 旅行需求描述 |
+| 参数        | 类型     | 必填 | 说明     |
+|-----------|--------|----|--------|
+| `request` | string | 是  | 旅行需求描述 |
 
 **响应示例**
 
@@ -764,10 +765,10 @@ GET /ai/chat/mcp/chat?memoryId={id}&message={message}
 
 **参数**
 
-| 参数 | 类型 | 必填 | 说明 |
-|-----|------|------|------|
-| `memoryId` | string | 否 | 会话ID，默认 "user001" |
-| `message` | string | 是 | 用户消息 |
+| 参数         | 类型     | 必填 | 说明                |
+|------------|--------|----|-------------------|
+| `memoryId` | string | 否  | 会话ID，默认 "user001" |
+| `message`  | string | 是  | 用户消息              |
 
 **响应示例**
 
@@ -791,6 +792,7 @@ curl -G "http://localhost:8080/ai/chat/mcp/chat" \
 **说明**
 
 AI 会自动判断使用哪个工具：
+
 - 数学计算 → Python MCP calculator
 - 天气查询 → Java getWeather
 - 数据库查询 → Java executeQuery
@@ -1073,11 +1075,11 @@ PUT /ai/chat/prompts/{key}?content={content}&version={version}
 
 **参数**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-|-----|------|------|-------|------|
-| `key` | string | 是 | - | Prompt 键名（路径参数） |
-| `content` | string | 是 | - | Prompt 内容 |
-| `version` | string | 否 | 2.0 | 版本号 |
+| 参数        | 类型     | 必填 | 默认值 | 说明              |
+|-----------|--------|----|-----|-----------------|
+| `key`     | string | 是  | -   | Prompt 键名（路径参数） |
+| `content` | string | 是  | -   | Prompt 内容       |
+| `version` | string | 否  | 2.0 | 版本号             |
 
 **响应示例**
 
@@ -1105,13 +1107,13 @@ PUT /ai/chat/prompts/{key}?content={content}&version={version}
 
 ### 常见状态码
 
-| 状态码 | 说明 | 处理建议 |
-|-------|------|---------|
-| `200 OK` | 请求成功 | - |
-| `400 Bad Request` | 请求参数错误 | 检查参数格式和必填项 |
-| `404 Not Found` | 资源不存在 | 检查请求路径 |
-| `500 Internal Server Error` | 服务器错误 | 查看服务器日志 |
-| `503 Service Unavailable` | 服务不可用 | 检查 AI API 配置 |
+| 状态码                         | 说明     | 处理建议         |
+|-----------------------------|--------|--------------|
+| `200 OK`                    | 请求成功   | -            |
+| `400 Bad Request`           | 请求参数错误 | 检查参数格式和必填项   |
+| `404 Not Found`             | 资源不存在  | 检查请求路径       |
+| `500 Internal Server Error` | 服务器错误  | 查看服务器日志      |
+| `503 Service Unavailable`   | 服务不可用  | 检查 AI API 配置 |
 
 ---
 

@@ -96,7 +96,7 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
             addInternal(id, embedding, segment);
         }
 
-        log.info("✅ 批量添加 {} 个向量到 MySQL", ids.size());
+        log.info("批量添加 {} 个向量到 MySQL", ids.size());
     }
 
     /**
@@ -104,15 +104,15 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
      */
     @Override
     public EmbeddingSearchResult<TextSegment> search(EmbeddingSearchRequest request) {
-        log.info("🔍 开始向量检索: maxResults={}, minScore={}",
+        log.info("开始向量检索: maxResults={}, minScore={}",
                 request.maxResults(), request.minScore());
 
         // 查询所有向量
         List<KnowledgeEmbeddingEntity> allEntities = knowledgeEmbeddingMapper.selectList(null);
-        log.info("📊 数据库中共有 {} 个向量", allEntities.size());
+        log.info("据库中共有 {} 个向量", allEntities.size());
 
         if (allEntities.isEmpty()) {
-            log.warn("⚠️ 向量库为空，请先添加知识");
+            log.warn("向量库为空，请先添加知识");
             return new EmbeddingSearchResult<>(Collections.emptyList());
         }
 
@@ -142,7 +142,7 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
                     ));
                 }
             } catch (Exception e) {
-                log.error("❌ 处理向量失败: id={}", entity.getEmbeddingId(), e);
+                log.error("处理向量失败: id={}", entity.getEmbeddingId(), e);
             }
         }
 
@@ -152,7 +152,7 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
                 .limit(request.maxResults())
                 .collect(Collectors.toList());
 
-        log.info("✅ 检索完成，返回 {} 个结果", result.size());
+        log.info(" 检索完成，返回 {} 个结果", result.size());
         return new EmbeddingSearchResult<>(result);
     }
 
@@ -165,7 +165,7 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
         wrapper.eq(KnowledgeEmbeddingEntity::getEmbeddingId, id);
 
         int deleted = knowledgeEmbeddingMapper.delete(wrapper);
-        log.info("🗑️ 删除向量: id={}, deleted={}", id, deleted);
+        log.info("删除向量: id={}, deleted={}", id, deleted);
     }
 
     /**
@@ -181,7 +181,7 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
         wrapper.in(KnowledgeEmbeddingEntity::getEmbeddingId, ids);
 
         int deleted = knowledgeEmbeddingMapper.delete(wrapper);
-        log.info("🗑️ 批量删除向量: count={}, deleted={}", ids.size(), deleted);
+        log.info("批量删除向量: count={}, deleted={}", ids.size(), deleted);
     }
 
     /**
@@ -190,7 +190,7 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
     @Override
     public void removeAll() {
         knowledgeEmbeddingMapper.delete(null);
-        log.info("🗑️ 已清空所有向量数据");
+        log.info("已清空所有向量数据");
     }
 
     // ==================== 私有辅助方法 ====================
@@ -207,7 +207,7 @@ public class MysqlEmbeddingStore implements EmbeddingStore<TextSegment> {
         entity.setCreatedTime(LocalDateTime.now());
 
         knowledgeEmbeddingMapper.insert(entity);
-        log.debug("💾 添加向量: id={}, content length={}", id, entity.getContent().length());
+        log.debug("添加向量: id={}, content length={}", id, entity.getContent().length());
     }
 
     /**

@@ -36,7 +36,7 @@ public interface AiSqlAssistantService {
             """)
     String chat(@MemoryId String memoryId, @UserMessage String message);
 
-    @SystemMessage("👉 将文本改写成类似小红书的 Emoji 风格")
+    @SystemMessage("将文本改写成类似小红书的 Emoji 风格")
     Flux<String> chatWithStream(@MemoryId String memoryId, @UserMessage String message);
 
     @SystemMessage("""
