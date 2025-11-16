@@ -3,13 +3,13 @@
 <div align="center">
 
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.java.net/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.7-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Langchain4j](https://img.shields.io/badge/Langchain4j-1.0.1-blue.svg)](https://docs.langchain4j.dev/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **基于 Langchain4j 构建的企业级 AI 对话系统**
 
-支持多轮对话 · RAG 检索 · 工具调用 · Text-to-SQL · 向量知识库
+支持多轮对话 · RAG 检索 · 工具调用 · Text-to-SQL · MCP 协议 · 向量知识库
 
 [快速开始](#-快速开始) · [功能特性](#-功能特性) · [API 文档](docs/API.md) · [系统架构](#-系统架构)
 
@@ -28,6 +28,8 @@
 - 🔧 **工具调用能力** - AI 自主调用外部工具和 API，完成复杂任务
 - 💬 **Text-to-SQL** - 自然语言转 SQL，无需编写代码即可查询数据库
 - 🎯 **结构化输出** - 从非结构化文本中提取结构化数据
+- 🔌 **MCP 协议支持** - 集成 Model Context Protocol，支持跨语言工具调用
+- 📝 **Prompt 管理** - 集中式提示词管理，支持热更新和版本控制
 - 🚀 **生产就绪** - 完整的错误处理、日志记录、性能优化
 
 ### 🎯 适用场景
@@ -83,13 +85,31 @@ AI 可以自主判断并调用外部工具：
 - 🔍 地点搜索
 - 🗄️ 数据库操作
 - 🕐 时间计算
+- 🧮 数学计算（Python MCP）
+- 📁 文件操作（Python MCP）
 
 ### 5️⃣ 高级 RAG 技术
 
 - 🔍 **查询改写** - 将简短查询扩展为详细描述，提升检索精度
 - 🎯 **多查询检索** - 从多个角度理解问题，合并检索结果
 - 📊 **Step-back 查询** - 先理解背景知识，再回答具体问题
-- 🔄 **混合检索** - 结合结构和数据，避免检索偏差
+- 🔄 **混合检索** - 结合语义和关键词，避免检索偏差
+
+### 6️⃣ MCP (Model Context Protocol) 集成
+
+支持通过 MCP 协议调用外部服务：
+
+- 🔌 **跨语言工具集成** - Java 与 Python 工具无缝协作
+- 🌐 **HTTP 独立部署** - Python MCP Server 独立运行，易于扩展
+- 🤖 **AI 自动调度** - AI 自主判断调用 Java 工具或 MCP 工具
+- 📦 **动态工具发现** - 自动注册和管理 MCP 服务
+
+### 7️⃣ Prompt 管理系统
+
+- 📝 **集中管理** - 所有提示词统一存储和维护
+- 🔄 **热更新** - 无需重启应用即可修改 Prompt
+- 📊 **版本控制** - 支持 Prompt 版本管理和历史记录
+- 🎯 **多场景支持** - 预置多种场景模板（SQL 专家、旅行规划等）
 
 ---
 
@@ -97,7 +117,7 @@ AI 可以自主判断并调用外部工具：
 
 ### 核心框架
 
-- **Spring Boot 3.4.5** - 企业级应用框架
+- **Spring Boot 3.5.7** - 企业级应用框架
 - **Langchain4j 1.0.1** - Java AI 开发框架
 - **Java 21** - 最新 LTS 版本
 
@@ -119,6 +139,7 @@ AI 可以自主判断并调用外部工具：
 - **Project Reactor** - 响应式编程（流式输出）
 - **RestTemplate** - HTTP 客户端（外部 API 调用）
 - **Apache Commons Math** - 数学计算（余弦相似度）
+- **Flask** - Python MCP Server 框架
 
 ---
 
@@ -134,18 +155,28 @@ graph TB
     
     subgraph "🧠 服务层"
         AiService[AiSqlAssistantService<br/>AI对话服务]
+        McpService[McpAssistantService<br/>MCP智能助手]
         RagService[AdvancedRagService<br/>高级RAG检索]
         QueryService[QueryTransformService<br/>查询转换优化]
         AgentService[AgentService<br/>AI Agent任务规划]
-        ToolsService[SysTools<br/>工具调用]
+        PromptMgr[PromptManager<br/>提示词管理]
     end
     
-    subgraph "🔧 Langchain4j 核心框架"
+    subgraph "🔧 工具层"
+        JavaTools[SysTools<br/>Java工具集]
+        McpTools[McpToolProvider<br/>MCP工具桥接]
+    end
+    
+    subgraph "🔌 MCP 层"
+        McpManager[McpManager<br/>MCP服务管理]
+        HttpMcpServer[HttpMcpServer<br/>HTTP客户端]
+    end
+    
+    subgraph "🔧 Langchain4j 核心"
         ChatModel[ChatModel<br/>对话模型]
         EmbeddingModel[EmbeddingModel<br/>向量模型]
         ChatMemory[ChatMemoryProvider<br/>记忆管理]
         ContentRetriever[ContentRetriever<br/>内容检索]
-        Streaming[StreamingChatModel<br/>流式输出]
     end
     
     subgraph "💾 数据存储层"
@@ -158,33 +189,42 @@ graph TB
     subgraph "🌐 外部服务"
         QwenAPI[阿里云通义千问<br/>qwen-plus]
         EmbeddingAPI[向量化API<br/>text-embedding-v4]
-        VisionAPI[多模态API<br/>qwen-vl-plus]
         MapAPI[高德地图API<br/>天气/地点]
+        PythonMcp[Python MCP Server<br/>独立部署]
     end
     
     Client --> Controller
     
     Controller --> AiService
+    Controller --> McpService
     Controller --> RagService
     Controller --> QueryService
     Controller --> AgentService
     
     AiService --> ChatModel
     AiService --> ChatMemory
-    AiService --> ToolsService
+    AiService --> JavaTools
+    
+    McpService --> ChatModel
+    McpService --> JavaTools
+    McpService --> McpTools
     
     RagService --> ContentRetriever
     RagService --> EmbeddingModel
     RagService --> ChatModel
     
     QueryService --> ChatModel
-    
     AgentService --> ChatModel
-    AgentService --> ToolsService
+    AgentService --> JavaTools
     
-    ChatModel --> Streaming
+    McpTools --> McpManager
+    McpManager --> HttpMcpServer
+    HttpMcpServer --> PythonMcp
+    
+    JavaTools --> MapAPI
+    JavaTools --> MySQL
+    
     ChatModel --> QwenAPI
-    
     EmbeddingModel --> EmbeddingAPI
     
     ChatMemory --> MySQL
@@ -194,13 +234,14 @@ graph TB
     MySQL --> EmbeddingTable
     MySQL --> BusinessTable
     
-    ToolsService --> MapAPI
-    ToolsService --> MySQL
+    PromptMgr -.-> AiService
+    PromptMgr -.-> McpService
+    PromptMgr -.-> AgentService
     
     style Client fill:#e1f5ff
     style Controller fill:#fff3e0
-    style ChatModel fill:#f3e5f5
-    style EmbeddingModel fill:#f3e5f5
+    style McpManager fill:#f3e5f5
+    style PythonMcp fill:#e8f5e9
     style MySQL fill:#e8f5e9
     style QwenAPI fill:#fce4ec
 ```
@@ -214,6 +255,7 @@ graph TB
 - ☕ JDK 21+
 - 📦 Maven 3.8+
 - 🗄️ MySQL 8.0+
+- 🐍 Python 3.8+ (可选，用于 MCP Server)
 - 🔑 [通义千问 API Key](https://dashscope.aliyun.com/)
 
 ### 1. 克隆项目
@@ -242,7 +284,21 @@ langchain4j:
       api-key: sk-your-api-key-here  # 替换为你的 API Key
 ```
 
-### 4. 启动应用
+### 4. 启动 Python MCP Server（可选）
+
+如果需要使用 MCP 功能：
+
+```bash
+# 安装依赖
+pip3 install flask
+
+# 启动 MCP Server
+python3 docs/mcp_server_http.py
+```
+
+MCP Server 将在 `http://localhost:5000` 启动。
+
+### 5. 启动 Java 应用
 
 ```bash
 mvn spring-boot:run
@@ -250,7 +306,7 @@ mvn spring-boot:run
 
 应用启动后访问：`http://localhost:8080`
 
-### 5. 快速测试
+### 6. 快速测试
 
 ```bash
 # 测试基础对话
@@ -261,9 +317,9 @@ curl -X POST "http://localhost:8080/ai/chat/knowledge/add" \
   -H "Content-Type: text/plain;charset=UTF-8" \
   -d "Langchain4j 是一个用于构建 AI 应用的 Java 框架"
 
-# 知识库问答
-curl -G "http://localhost:8080/ai/chat/user001/sql/generate" \
-  --data-urlencode "userMessage=什么是 Langchain4j"
+# 测试 MCP 工具调用（需要先启动 Python MCP Server）
+curl -G "http://localhost:8080/ai/chat/mcp/chat" \
+  --data-urlencode "message=帮我计算 sqrt(16) + pow(2, 3)"
 ```
 
 ---
@@ -311,18 +367,30 @@ AI: [调用地点搜索API] 为您找到3家咖啡店：
     3. Luckin Coffee（距离1.2公里）
 ```
 
-### 示例 4: RAG 知识库问答
+### 示例 4: MCP 跨语言工具调用
 
-基于上传的文档回答专业问题：
+AI 自动选择合适的工具（Java 或 Python）：
 
 ```
-# 1. 上传公司文档到知识库
-POST /ai/chat/knowledge/add
-Content: "公司员工请假规定：年假15天，病假凭医院证明..."
+用户: 帮我计算 sqrt(16) + pow(2, 3)，然后查询深圳天气
+AI: 
+[调用 Python MCP calculator] 计算结果：12.0
+[调用 Java getWeather] 深圳今天晴天，温度25-32℃
 
-# 2. 基于知识库问答
-用户: 请假需要提前几天申请？
-AI: 根据公司规定，普通请假需提前3天申请，紧急情况需当天报备...
+计算结果是12.0，深圳今天天气晴朗，温度适宜。
+```
+
+### 示例 5: Prompt 热更新
+
+无需重启即可优化 AI 行为：
+
+```bash
+# 查看当前 Prompt
+curl "http://localhost:8080/ai/chat/prompts/sql_expert"
+
+# 更新 Prompt（立即生效）
+curl -X PUT "http://localhost:8080/ai/chat/prompts/sql_expert" \
+  -d "content=你是SQL专家，对课程名使用模糊匹配&version=2.1"
 ```
 
 ---
@@ -334,6 +402,13 @@ AI: 根据公司规定，普通请假需提前3天申请，紧急情况需当天
 - `GET /ai/chat/test` - 测试接口
 - `GET /ai/chat?memoryId={id}&userMessage={msg}` - 带记忆对话
 - `GET /ai/chat/{id}/stream/memory?userMessage={msg}` - 流式对话
+
+### MCP 功能
+
+- `GET /ai/chat/mcp/chat?message={msg}` - MCP 智能助手（AI 自动调度工具）
+- `GET /ai/chat/mcp/servers` - 列出所有 MCP 服务
+- `GET /ai/chat/mcp/tools` - 列出所有可用工具
+- `POST /ai/chat/mcp/execute` - 手动执行 MCP 工具
 
 ### 知识库管理
 
@@ -352,6 +427,12 @@ AI: 根据公司规定，普通请假需提前3天申请，紧急情况需当天
 - `GET /ai/chat/query/expand?query={q}` - 查询扩展
 - `GET /ai/chat/rag/with-query-transform?query={q}` - 查询改写 RAG
 - `GET /ai/chat/rag/compare-all?query={q}` - RAG 方法对比
+
+### Prompt 管理
+
+- `GET /ai/chat/prompts/list` - 列出所有 Prompt
+- `GET /ai/chat/prompts/{key}` - 获取指定 Prompt
+- `PUT /ai/chat/prompts/{key}` - 更新 Prompt（热更新）
 
 ### 工具调用
 
@@ -373,6 +454,17 @@ langchain4j:
       max-tokens: 2000               # 最大输出长度
     embedding-model:
       model-name: text-embedding-v4  # 向量模型
+
+# MCP 配置
+mcp:
+  python:
+    server:
+      url: http://localhost:5000     # Python MCP Server 地址
+
+# 外部 API 配置
+external-api:
+  amap:
+    key: your-amap-api-key           # 高德地图 API Key
 ```
 
 ### RAG 参数调优
@@ -402,26 +494,40 @@ ContentRetriever retriever = EmbeddingStoreContentRetriever.builder()
 robot/
 ├── src/main/java/com/mcp/robot/
 │   ├── config/              # 配置类
-│   │   └── AiConfiguration.java
+│   │   ├── AiConfiguration.java
+│   │   └── McpAutoConfiguration.java
 │   ├── controller/          # REST 控制器
 │   │   └── AiServiceController.java
 │   ├── service/             # 业务服务
 │   │   ├── AiSqlAssistantService.java
+│   │   ├── McpAssistantService.java
 │   │   ├── AdvancedRagService.java
 │   │   ├── QueryTransformService.java
 │   │   ├── AgentService.java
+│   │   ├── VisionService.java
 │   │   └── PromptManager.java
+│   ├── mcp/                 # MCP 协议实现
+│   │   ├── McpServer.java
+│   │   ├── McpManager.java
+│   │   └── HttpMcpServer.java
+│   ├── tools/               # AI 工具类
+│   │   ├── SysTools.java
+│   │   └── McpToolProvider.java
 │   ├── mapper/              # 数据访问层
 │   │   ├── ChatMemoryMapper.java
 │   │   └── KnowledgeEmbeddingMapper.java
-│   ├── model/               # 数据模型
-│   │   ├── ChatMemoryEntity.java
-│   │   └── KnowledgeEmbeddingEntity.java
-│   └── tools/               # AI 工具类
-│       └── SysTools.java
+│   └── model/               # 数据模型
+│       ├── ChatMemoryEntity.java
+│       ├── KnowledgeEmbeddingEntity.java
+│       ├── McpToolRequest.java
+│       └── Person.java
 ├── src/main/resources/
 │   ├── application.yaml     # 配置文件
 │   └── student_ddl.sql      # 示例数据库结构
+├── docs/                    # 文档目录
+│   ├── API.md               # API 文档
+│   ├── README.md            # 详细文档
+│   └── mcp_server_http.py   # Python MCP Server
 └── pom.xml                  # Maven 配置
 ```
 
@@ -429,7 +535,37 @@ robot/
 
 ## 🔧 高级特性
 
-### 1. 查询改写（Query Transformation）
+### 1. MCP (Model Context Protocol)
+
+支持跨语言工具调用：
+
+**架构优势**：
+- ✅ Java 主服务 + Python 工具服务独立部署
+- ✅ HTTP 通信，易于横向扩展
+- ✅ AI 自动判断调用哪个工具（Java 或 Python）
+- ✅ 支持动态工具发现和注册
+
+**可用工具**：
+- `calculator` - 复杂数学计算（支持三角函数、开方等）
+- `getPythonTime` - 格式化时间获取
+- `readFile` / `writeFile` - 文件操作
+
+### 2. Prompt 管理系统
+
+集中管理所有 AI 提示词：
+
+**核心功能**：
+- 📝 统一存储：所有 Prompt 集中管理
+- 🔄 热更新：无需重启即可修改
+- 📊 版本控制：支持 Prompt 历史追踪
+- 🎯 场景预置：SQL 专家、旅行规划、数据分析等
+
+**使用场景**：
+- A/B 测试不同 Prompt 效果
+- 生产环境快速修复 AI 行为
+- 多租户/多场景 Prompt 隔离
+
+### 3. 查询转换（Query Transformation）
 
 提升 RAG 检索精度：
 
@@ -437,7 +573,7 @@ robot/
 - **多视角查询**: 从不同角度理解问题
 - **Step-back**: 先查背景知识，再查具体答案
 
-### 2. AI Agent
+### 4. AI Agent
 
 多步骤任务规划和执行：
 
@@ -449,19 +585,6 @@ AI:
   3. 规划路线 → Day1: 故宫+天安门, Day2: 长城...
   4. 推荐美食 → 北京烤鸭、老北京炸酱面...
 ```
-
-### 3. 持久化记忆
-
-- MySQL 存储对话历史
-- 支持跨会话记忆
-- 自动清理过期数据
-
-### 4. 外部 API 集成
-
-已集成高德地图 API：
-- 天气查询
-- 地理编码
-- POI 搜索
 
 ---
 
@@ -489,21 +612,24 @@ AI:
 </details>
 
 <details>
-<summary><strong>Q: API Key 如何安全管理？</strong></summary>
+<summary><strong>Q: MCP Server 启动失败怎么办？</strong></summary>
 
 **A**:
-- ❌ 不要提交到 Git
-- ✅ 使用环境变量: `${DASHSCOPE_API_KEY}`
-- ✅ 生产环境使用配置中心（Nacos/Apollo）
+1. 确认 Python 3.8+ 已安装
+2. 安装 Flask: `pip3 install flask`
+3. 检查端口 5000 是否被占用: `lsof -i :5000`
+4. 查看 MCP Server 日志排查错误
+5. 不使用 MCP 功能也不影响主服务运行
 </details>
 
 <details>
-<summary><strong>Q: 如何处理通义千问 API 限制？</strong></summary>
+<summary><strong>Q: 如何添加自定义 MCP 工具？</strong></summary>
 
 **A**:
-- **Embedding 批量限制**: 代码已实现分批处理（每批10个）
-- **QPM 限制**: 添加延迟或升级账号
-- **文本长度限制**: 使用文档分割器
+1. 在 `docs/mcp_server_http.py` 中添加新工具函数
+2. 在 `McpToolProvider.java` 中添加对应的 `@Tool` 方法
+3. 重启 MCP Server 和 Java 应用
+4. AI 即可自动调用新工具
 </details>
 
 ---
@@ -513,6 +639,7 @@ AI:
 - 📖 [Langchain4j 官方文档](https://docs.langchain4j.dev/)
 - 🌐 [通义千问 API 文档](https://bailian.console.aliyun.com/)
 - 🎓 [RAG 技术详解](https://www.pinecone.io/learn/retrieval-augmented-generation/)
+- 🔌 [Model Context Protocol](https://modelcontextprotocol.io/)
 - 📝 [项目详细文档](docs/)
 
 ---

@@ -10,6 +10,7 @@
 - [RAG 功能](#rag-功能)
 - [高级 RAG](#高级-rag)
 - [AI Agent](#ai-agent)
+- [MCP 协议](#mcp-协议)
 - [工具调用](#工具调用)
 - [Prompt 管理](#prompt-管理)
 - [错误处理](#错误处理)
@@ -747,9 +748,279 @@ GET /ai/chat/agent/general?request={request}
 
 ---
 
+## MCP 协议
+
+MCP (Model Context Protocol) 支持跨语言工具调用，实现 Java 与 Python 工具的无缝集成。
+
+### 26. MCP 智能助手
+
+AI 自动调度 Java 和 Python MCP 工具。
+
+**请求**
+
+```http
+GET /ai/chat/mcp/chat?memoryId={id}&message={message}
+```
+
+**参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|-----|------|------|------|
+| `memoryId` | string | 否 | 会话ID，默认 "user001" |
+| `message` | string | 是 | 用户消息 |
+
+**响应示例**
+
+```json
+"计算结果：sqrt(16) + pow(2, 3) = 12.0
+根据查询，深圳今天晴天，温度25-32℃"
+```
+
+**使用示例**
+
+```bash
+# 数学计算（调用 Python MCP）
+curl -G "http://localhost:8080/ai/chat/mcp/chat" \
+  --data-urlencode "message=帮我计算 sqrt(16) + pow(2, 3)"
+
+# 组合调用（Python + Java 工具）
+curl -G "http://localhost:8080/ai/chat/mcp/chat" \
+  --data-urlencode "message=计算 10*20，然后查询深圳天气"
+```
+
+**说明**
+
+AI 会自动判断使用哪个工具：
+- 数学计算 → Python MCP calculator
+- 天气查询 → Java getWeather
+- 数据库查询 → Java executeQuery
+- 文件操作 → Python MCP readFile/writeFile
+
+---
+
+### 27. 列出 MCP 服务
+
+查看所有已注册的 MCP 服务器。
+
+**请求**
+
+```http
+GET /ai/chat/mcp/servers
+```
+
+**响应示例**
+
+```json
+[
+  {
+    "name": "python-mcp-server",
+    "version": "1.0.0",
+    "description": "Python实现的MCP服务器（HTTP独立部署）",
+    "protocol": "mcp/1.0"
+  }
+]
+```
+
+---
+
+### 28. 列出所有 MCP 工具
+
+查看所有可用的 MCP 工具。
+
+**请求**
+
+```http
+GET /ai/chat/mcp/tools
+```
+
+**响应示例**
+
+```json
+{
+  "python-mcp-server": [
+    {
+      "name": "calculator",
+      "description": "执行数学计算",
+      "parameters": {
+        "expression": {
+          "type": "string",
+          "description": "数学表达式",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "get_time",
+      "description": "获取当前时间",
+      "parameters": {
+        "format": {
+          "type": "string",
+          "description": "时间格式",
+          "required": false
+        }
+      }
+    },
+    {
+      "name": "read_file",
+      "description": "读取文件内容",
+      "parameters": {
+        "path": {
+          "type": "string",
+          "description": "文件路径",
+          "required": true
+        }
+      }
+    },
+    {
+      "name": "write_file",
+      "description": "写入文件内容",
+      "parameters": {
+        "path": {
+          "type": "string",
+          "description": "文件路径",
+          "required": true
+        },
+        "content": {
+          "type": "string",
+          "description": "文件内容",
+          "required": true
+        }
+      }
+    }
+  ]
+}
+```
+
+---
+
+### 29. 手动执行 MCP 工具
+
+直接调用指定的 MCP 工具（不通过 AI）。
+
+**请求**
+
+```http
+POST /ai/chat/mcp/execute
+Content-Type: application/json
+```
+
+**请求体**
+
+```json
+{
+  "serverName": "python-mcp-server",
+  "toolName": "calculator",
+  "parameters": {
+    "expression": "sqrt(16) + pow(2, 3)"
+  }
+}
+```
+
+**响应示例（成功）**
+
+```json
+{
+  "type": "success",
+  "content": "计算结果: sqrt(16) + pow(2, 3) = 12.0",
+  "success": true
+}
+```
+
+**响应示例（失败）**
+
+```json
+{
+  "type": "error",
+  "error": "计算错误: invalid syntax",
+  "success": false
+}
+```
+
+**使用示例**
+
+```bash
+# 计算器工具
+curl -X POST "http://localhost:8080/ai/chat/mcp/execute" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serverName": "python-mcp-server",
+    "toolName": "calculator",
+    "parameters": {
+      "expression": "sqrt(16) + pow(2, 3)"
+    }
+  }'
+
+# 获取时间
+curl -X POST "http://localhost:8080/ai/chat/mcp/execute" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serverName": "python-mcp-server",
+    "toolName": "get_time",
+    "parameters": {
+      "format": "%Y年%m月%d日 %H:%M:%S"
+    }
+  }'
+
+# 读取文件
+curl -X POST "http://localhost:8080/ai/chat/mcp/execute" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serverName": "python-mcp-server",
+    "toolName": "read_file",
+    "parameters": {
+      "path": "/tmp/test.txt"
+    }
+  }'
+
+# 写入文件
+curl -X POST "http://localhost:8080/ai/chat/mcp/execute" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "serverName": "python-mcp-server",
+    "toolName": "write_file",
+    "parameters": {
+      "path": "/tmp/test.txt",
+      "content": "Hello MCP World"
+    }
+  }'
+```
+
+---
+
+### MCP Python Server 部署
+
+MCP Server 是独立的 Python 服务，需要单独启动：
+
+**启动命令**
+
+```bash
+# 安装依赖
+pip3 install flask
+
+# 启动 MCP Server
+python3 docs/mcp_server_http.py
+```
+
+**服务地址**
+
+默认监听 `http://localhost:5000`
+
+**配置修改**
+
+在 `application.yaml` 中配置 MCP Server 地址：
+
+```yaml
+mcp:
+  python:
+    server:
+      url: http://localhost:5000
+```
+
+---
+
 ## Prompt 管理
 
-### 26. 列出所有 Prompt 模板
+### 30. 列出所有 Prompt 模板
 
 **请求**
 
@@ -776,7 +1047,7 @@ GET /ai/chat/prompts/list
 
 ---
 
-### 27. 获取指定 Prompt
+### 31. 获取指定 Prompt
 
 **请求**
 
@@ -792,7 +1063,7 @@ GET /ai/chat/prompts/{key}
 
 ---
 
-### 28. 更新 Prompt 模板
+### 32. 更新 Prompt 模板
 
 **请求**
 
