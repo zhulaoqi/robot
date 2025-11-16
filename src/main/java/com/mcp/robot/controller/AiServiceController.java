@@ -47,6 +47,7 @@ public class AiServiceController {
     private final McpManager mcpManager;
     private final QueryTransformService queryTransformService;
     private final ChatModel chatModel;
+    private final McpAssistantService mcpAssistantService;
 
 
     // ==================== 基础聊天功能 ====================
@@ -422,6 +423,64 @@ public class AiServiceController {
                 request.getParameters()
         );
     }
+
+// ====================  MCP 智能调度功能 ====================
+
+    /**
+     *  MCP 智能助手
+     */
+    @GetMapping("/mcp/chat")
+    public String mcpChat(
+            @RequestParam(defaultValue = "user001") String memoryId,
+            @RequestParam String message) {
+        log.info("  用户: {}, 消息: {}", memoryId, message);
+        return mcpAssistantService.chat(memoryId, message);
+    }
+
+    /**
+     *  MCP 工具调度演示
+     */
+    @GetMapping("/mcp/demo")
+    public Map<String, Object> mcpDemo() {
+        log.info(" 测试 AI 自动调度工具");
+
+        List<Map<String, String>> testCases = List.of(
+                Map.of(
+                        "question", "帮我计算 sqrt(16) + pow(2, 3)",
+                        "expected_tool", "calculator (Python MCP)"
+                ),
+                Map.of(
+                        "question", "现在几点了",
+                        "expected_tool", "getPythonTime (Python MCP)"
+                ),
+                Map.of(
+                        "question", "深圳天气怎么样",
+                        "expected_tool", "getWeather (Java API)"
+                ),
+                Map.of(
+                        "question", "帮我计算 2 + 3 * 4，然后告诉我现在的时间",
+                        "expected_tool", "calculator + getPythonTime (组合)"
+                )
+        );
+
+        List<Map<String, String>> results = new ArrayList<>();
+        for (Map<String, String> testCase : testCases) {
+            String question = testCase.get("question");
+            String answer = mcpAssistantService.chat("demo-user", question);
+
+            results.add(Map.of(
+                    "question", question,
+                    "expected_tool", testCase.get("expected_tool"),
+                    "answer", answer
+            ));
+        }
+
+        return Map.of(
+                "total", testCases.size(),
+                "results", results
+        );
+    }
+
     // ==================== 🔍 查询转换功能 ====================
 
     /**

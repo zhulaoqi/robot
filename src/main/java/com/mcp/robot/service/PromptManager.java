@@ -107,7 +107,7 @@ public class PromptManager {
                         """)
                 .build());
 
-        log.info("✅ 已加载 {} 个默认 Prompt 模板", templates.size());
+        log.info("已加载 {} 个默认 Prompt 模板", templates.size());
     }
 
     /**
@@ -115,7 +115,7 @@ public class PromptManager {
      */
     public void registerPrompt(String key, PromptTemplate template) {
         templates.put(key, template);
-        log.info("📝 注册 Prompt 模板: {} (版本: {})", template.getName(), template.getVersion());
+        log.info("注册 Prompt 模板: {} (版本: {})", template.getName(), template.getVersion());
     }
 
     /**
@@ -124,8 +124,8 @@ public class PromptManager {
     public String getPrompt(String key) {
         PromptTemplate template = templates.get(key);
         if (template == null) {
-            log.warn("⚠️ Prompt 模板不存在: {}", key);
-            return "你是一个智能助手。";  // 默认提示词
+            log.warn("Prompt 模板不存在: {}", key);
+            return "你是一个智能助手。";
         }
         return template.getContent();
     }
@@ -136,7 +136,7 @@ public class PromptManager {
     public void updatePrompt(String key, String newContent, String newVersion) {
         PromptTemplate oldTemplate = templates.get(key);
         if (oldTemplate == null) {
-            log.warn("⚠️ Prompt 模板不存在，无法更新: {}", key);
+            log.warn("Prompt 模板不存在，无法更新: {}", key);
             return;
         }
 
