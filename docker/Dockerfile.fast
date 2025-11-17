@@ -1,0 +1,18 @@
+# 无需 Maven 下载依赖，构建速度极快
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+# 直接复制本地编译好的 JAR（需要先执行: mvn clean package -DskipTests）
+COPY target/*.jar app.jar
+
+# 暴露端口
+EXPOSE 8080
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ai/chat/test || exit 1
+
+# 启动应用
+ENTRYPOINT ["java", "-Xms512m", "-Xmx1024m", "-jar", "app.jar"]
+

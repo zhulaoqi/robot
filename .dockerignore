@@ -1,0 +1,53 @@
+# Maven
+target/
+!target/*.jar
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+docker/
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# 日志
+logs/
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+*.swp
+*~
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# 文档（不需要打包进镜像）
+docs/*.md
+README.md
+LICENSE
+*.md
+

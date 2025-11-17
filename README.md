@@ -251,22 +251,61 @@ graph TB
 
 ## 🚀 快速开始
 
-### 前置要求
+### 方式一：Docker 一键部署
 
-- ☕ JDK 21+
-- 📦 Maven 3.8+
-- 🗄️ MySQL 8.0+
-- 🐍 Python 3.8+ (可选，用于 MCP Server)
-- 🔑 [通义千问 API Key](https://dashscope.aliyun.com/)
+最快的启动方式，无需安装 Java、MySQL、Python 等依赖。
 
-### 1. 克隆项目
+#### 前置要求
+
+- Docker 20.10+
+- Docker Compose 2.0+
+- 通义千问 API Key
+
+#### 启动步骤
+
+```bash
+# 1. 克隆项目
+git clone git@github.com:zhulaoqi/robot.git
+cd robot
+
+# 2. 配置环境变量
+cp docker/env.example docker/.env
+vi docker/.env  # 填入你的 百炼平台和高德平台key
+
+# 3. 一键启动（自动启动 MySQL + Java 服务 + Python MCP Server）
+cd docker && ./start.sh
+
+# 或者使用 docker-compose
+cd docker && docker-compose up -d
+```
+
+服务启动后：
+- Java 主服务：http://localhost:8080
+- Python MCP Server：http://localhost:5001
+- MySQL：localhost:3306
+
+详细的 Docker 部署文档请参考：[docker/README.md](docker/README.md)
+
+---
+
+### 方式二：本地开发部署
+
+#### 前置要求
+
+- JDK 21+
+- Maven 3.8+
+- MySQL 8.0+
+- Python 3.8+ (可选，用于 MCP Server)
+- [通义千问 API Key](https://dashscope.aliyun.com/)
+
+#### 1. 克隆项目
 
 ```bash
 git clone git@github.com:zhulaoqi/robot.git
 cd robot
 ```
 
-### 2. 配置数据库
+#### 2. 配置数据库
 
 ```sql
 CREATE DATABASE langchain_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -274,7 +313,7 @@ CREATE DATABASE langchain_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 执行数据库初始化脚本（项目启动时会自动创建表）。
 
-### 3. 配置 API Key
+#### 3. 配置 API Key
 
 修改 `src/main/resources/application.yaml`：
 
@@ -285,7 +324,7 @@ langchain4j:
       api-key: sk-your-api-key-here  # 替换为你的 API Key
 ```
 
-### 4. 启动 Python MCP Server（可选）
+#### 4. 启动 Python MCP Server（可选）
 
 如果需要使用 MCP 功能：
 
@@ -297,9 +336,9 @@ pip3 install flask
 python3 docs/mcp_server_http.py
 ```
 
-MCP Server 将在 `http://localhost:5000` 启动。
+MCP Server 将在 `http://localhost:5001` 启动。
 
-### 5. 启动 Java 应用
+#### 5. 启动 Java 应用
 
 ```bash
 mvn spring-boot:run
@@ -307,7 +346,9 @@ mvn spring-boot:run
 
 应用启动后访问：`http://localhost:8080`
 
-### 6. 快速测试
+---
+
+### 快速测试
 
 ```bash
 # 测试基础对话

@@ -114,12 +114,17 @@ def health_check():
 
 
 if __name__ == "__main__":
-    print("🐍 Python MCP Server 启动中...")
-    print("📍 监听地址: http://0.0.0.0:5001")
-    print("📚 API文档:")
+    import os
+    
+    # 支持通过环境变量配置端口
+    port = int(os.getenv("MCP_PORT", 5001))
+    
+    print("Python MCP Server 启动中...")
+    print(f"监听地址: http://0.0.0.0:{port}")
+    print("API文档:")
     print("   GET  /mcp/info     - 获取服务器信息")
     print("   GET  /mcp/tools    - 列出所有工具")
     print("   POST /mcp/execute  - 执行工具")
     print("   GET  /health       - 健康检查")
 
-    app.run(host='0.0.0.0', port=5001, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)

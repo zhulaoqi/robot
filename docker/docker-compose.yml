@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: robot-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-langchain_db}
+      MYSQL_USER: ${MYSQL_USER:-robot}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-robot123}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - robot-network
+
+  # Python MCP Server
+  python-mcp:
+    build:
+      context: ..
+      dockerfile: docker/python.Dockerfile
+    container_name: robot-python-mcp
+    restart: unless-stopped
+    environment:
+      MCP_PORT: 5001
+    ports:
+      - "5001:5001"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5001/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - robot-network
+
+  # Java 主服务
+  robot-app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.fast
+    container_name: robot-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # 数据库配置
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-langchain_db}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+
+      
+      # MCP 配置
+      MCP_PYTHON_SERVER_URL: http://python-mcp:5001
+      
+      # 通义千问 API 配置
+      LANGCHAIN4J_OPEN_AI_CHAT_MODEL_API_KEY: ${QWEN_API_KEY}
+      LANGCHAIN4J_OPEN_AI_CHAT_MODEL_MODEL_NAME: ${QWEN_MODEL_NAME:-qwen-plus}
+      LANGCHAIN4J_OPEN_AI_CHAT_MODEL_BASE_URL: ${QWEN_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      
+      LANGCHAIN4J_OPEN_AI_STREAMING_CHAT_MODEL_API_KEY: ${QWEN_API_KEY}
+      LANGCHAIN4J_OPEN_AI_STREAMING_CHAT_MODEL_MODEL_NAME: ${QWEN_MODEL_NAME:-qwen-plus}
+      LANGCHAIN4J_OPEN_AI_STREAMING_CHAT_MODEL_BASE_URL: ${QWEN_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      
+      LANGCHAIN4J_OPEN_AI_EMBEDDING_MODEL_API_KEY: ${QWEN_API_KEY}
+      LANGCHAIN4J_OPEN_AI_EMBEDDING_MODEL_MODEL_NAME: ${QWEN_EMBEDDING_MODEL:-text-embedding-v4}
+      LANGCHAIN4J_OPEN_AI_EMBEDDING_MODEL_BASE_URL: ${QWEN_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      
+      # 高德地图 API
+      EXTERNAL_API_AMAP_KEY: ${AMAP_API_KEY:-}
+      
+      # JVM 参数
+      JAVA_OPTS: "-Xms512m -Xmx1024m"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      python-mcp:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/ai/chat/test"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - robot-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  robot-network:
+    driver: bridge
+
