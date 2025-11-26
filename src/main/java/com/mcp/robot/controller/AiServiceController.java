@@ -48,6 +48,7 @@ public class AiServiceController {
     private final QueryTransformAiService queryTransformAiService;
     private final ChatModel chatModel;
     private final McpAssistantService mcpAssistantService;
+    private final DynamicSqlAssistantService dynamicSqlAssistantService;
 
 
     // ==================== 基础聊天功能 ====================
@@ -252,6 +253,18 @@ public class AiServiceController {
     @GetMapping("/{id}/sql/generate")
     public String sqlGenerate(@PathVariable String id, @RequestParam String userMessage) {
         return aiSqlAssistantService.chatWithSql(id, userMessage);
+    }
+
+    @GetMapping("/{id}/sql/generate/hotUpdate")
+    public String generateSql(@PathVariable String id, @RequestParam String userMessage) {
+        // 从 PromptManager 动态获取最新的 Prompt
+        String systemPrompt = promptManager.getPrompt("sql_expert");
+
+        PromptManager.PromptTemplate template = promptManager.listAllPrompts().get("sql_expert");
+        log.info("使用动态 Prompt: {} (版本: {})", template.getName(), template.getVersion());
+
+        // 通过 @V 注解注入动态 Prompt
+        return dynamicSqlAssistantService.chatWithSql(id, systemPrompt, userMessage);
     }
 
     /**

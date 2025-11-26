@@ -185,7 +185,7 @@ curl -X PUT "http://localhost:8080/ai/chat/prompts/sql_expert" \
 
 ### 🔄 7.4 再次执行 Text-to-SQL（对比效果）
 
-curl -G "http://localhost:8080/ai/chat/user-sql-demo/sql/generate" \
+curl -G "http://localhost:8080/ai/chat/user-sql-demo/sql/generate/hotUpdate" \
 --data-urlencode "userMessage=查询张铁牛的大学语文成绩"> **💡 A/B 测试**: 先执行 7.2 → 7.4（版本A） → 7.3 → 7.4（版本B），对比
 Prompt 更新前后的输出差异
 
