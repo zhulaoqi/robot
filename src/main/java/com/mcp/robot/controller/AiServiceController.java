@@ -57,7 +57,7 @@ public class AiServiceController {
      */
     @GetMapping("/test")
     public String test() {
-        return aiSqlAssistantService.chat("test", "你是谁");
+        return aiSqlAssistantService.test("你是谁");
     }
 
     /**

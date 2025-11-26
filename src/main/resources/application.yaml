@@ -5,11 +5,15 @@ langchain4j:
       api-key: sk-you_key
       model-name: qwen-plus
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      log-requests: true
+      log-responses: true
     # 流式响应模型
     streaming-chat-model:
       api-key: sk-you_key
       model-name: qwen-plus
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      log-requests: true
+      log-responses: true
     # 向量模型
     embedding-model:
       api-key: sk-you_key
