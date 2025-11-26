@@ -79,7 +79,7 @@ public class PersistentChatMemoryStore implements ChatMemoryStore {
 
         chatMemoryMapper.insert(entity);
 
-        log.info("💾 保存消息成功并清除缓存, memoryId: {}, type: {}", memoryIdStr, lastMessage.type());
+        log.info("保存消息成功并清除缓存, memoryId: {}, type: {}", memoryIdStr, lastMessage.type());
     }
 
     /**
