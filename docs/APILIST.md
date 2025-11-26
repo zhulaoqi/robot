@@ -20,6 +20,21 @@ curl -G "http://localhost:8080/ai/chat" \
 
 curl "http://localhost:8080/ai/chat/demo-stream/stream/memory?userMessage=用轻松幽默的风格介绍一下Langchain4j框架"---
 
+### 1.5 结构化输出 - 提取人员信息
+
+curl -G "http://localhost:8080/ai/chat/extract/person" \
+  --data-urlencode "userMessage=我叫李明，今年28岁，男性，在腾讯担任高级Java工程师，手机号是13800138000，邮箱是liming@example.com，住在深圳市南山区"
+
+### 1.6 Prompt 模板变量 - Mock 数据生成
+
+curl -G "http://localhost:8080/ai/chat/mock/username" \
+  --data-urlencode "total=5"
+
+### 1.7 再试试生成更多
+
+curl -G "http://localhost:8080/ai/chat/mock/username" \
+  --data-urlencode "total=10"
+
 ## 2️⃣ 知识库 RAG
 
 ### 2.1 添加一条知识
