@@ -20,6 +20,9 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
  */
 @AiService(wiringMode = EXPLICIT, chatModel = "openAiChatModel", streamingChatModel = "openAiStreamingChatModel", chatMemoryProvider = "chatMemoryProvider", contentRetriever = "contentRetriever", tools = {"sysTools"})
 public interface AiSqlAssistantService {
+
+    String test(@UserMessage String message);
+
     @SystemMessage("""
             你是一个智能助手，可以帮助用户完成各种任务。
             
