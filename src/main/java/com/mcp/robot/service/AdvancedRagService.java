@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AdvancedRagService {
 
-    private final QueryTransformService queryTransform;
+    private final QueryTransformAiService queryTransformAiService;
     private final EmbeddingModel embeddingModel;
     private final EmbeddingStore<TextSegment> embeddingStore;
     private final ChatModel chatModel;
@@ -32,7 +32,7 @@ public class AdvancedRagService {
      */
     public String chatWithQueryTransform(String userQuery) {
         // 1. 查询改写
-        String expandedQuery = queryTransform.expandQuery(userQuery);
+        String expandedQuery = queryTransformAiService.expandQuery(userQuery);
         log.info("🔍 原始查询: {}", userQuery);
         log.info("✨ 扩展查询: {}", expandedQuery);
 
@@ -73,7 +73,7 @@ public class AdvancedRagService {
      */
     public String chatWithMultiQuery(String userQuery) {
         // 1. 生成多个查询视角
-        List<String> queries = queryTransform.generateMultiQueries(userQuery);
+        List<String> queries = queryTransformAiService.generateMultiQueries(userQuery);
         log.info("🔍 生成 {} 个查询视角", queries.size());
 
         // 2. 对每个查询进行检索
@@ -90,7 +90,7 @@ public class AdvancedRagService {
             result.matches().forEach(match -> allResults.add(match.embedded()));
         }
 
-        log.info("📊 合并后共 {} 个独特结果", allResults.size());
+        log.info("合并后共 {} 个独特结果", allResults.size());
 
         // 3. 合并结果，生成回答
         String context = allResults.stream()

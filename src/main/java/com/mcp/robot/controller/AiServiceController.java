@@ -45,7 +45,7 @@ public class AiServiceController {
     private final AdvancedRagService advancedRagService;
     private final PromptManager promptManager;
     private final McpManager mcpManager;
-    private final QueryTransformService queryTransformService;
+    private final QueryTransformAiService queryTransformAiService;
     private final ChatModel chatModel;
     private final McpAssistantService mcpAssistantService;
 
@@ -491,7 +491,7 @@ public class AiServiceController {
         log.info(" [查询扩展] 原始查询: {}", query);
 
         long startTime = System.currentTimeMillis();
-        String expanded = queryTransformService.expandQuery(query);
+        String expanded = queryTransformAiService.expandQuery(query);
         long duration = System.currentTimeMillis() - startTime;
 
         log.info("✨ 扩展后: {}", expanded);
@@ -513,7 +513,7 @@ public class AiServiceController {
         log.info(" [SQL查询重写] 原始查询: {}", query);
 
         long startTime = System.currentTimeMillis();
-        String rewritten = queryTransformService.rewriteForSql(query);
+        String rewritten = queryTransformAiService.rewriteForSql(query);
         long duration = System.currentTimeMillis() - startTime;
 
         log.info("✨ 重写后: {}", rewritten);
@@ -534,7 +534,7 @@ public class AiServiceController {
         log.info(" [多视角查询] 原始查询: {}", query);
 
         long startTime = System.currentTimeMillis();
-        List<String> multiQueries = queryTransformService.generateMultiQueries(query);
+        List<String> multiQueries = queryTransformAiService.generateMultiQueries(query);
         long duration = System.currentTimeMillis() - startTime;
 
         log.info("✨ 生成 {} 个查询视角", multiQueries.size());
@@ -555,7 +555,7 @@ public class AiServiceController {
         log.info("🔍 [Step-back查询] 原始查询: {}", query);
 
         long startTime = System.currentTimeMillis();
-        String stepBack = queryTransformService.stepBackQuery(query);
+        String stepBack = queryTransformAiService.stepBackQuery(query);
         long duration = System.currentTimeMillis() - startTime;
 
         log.info("✨ 后退查询: {}", stepBack);
@@ -685,7 +685,7 @@ public class AiServiceController {
 
         // 步骤1: 查询扩展
         long step1Start = System.currentTimeMillis();
-        String expandedQuery = queryTransformService.expandQuery(query);
+        String expandedQuery = queryTransformAiService.expandQuery(query);
         long step1Duration = System.currentTimeMillis() - step1Start;
         steps.add(Map.of(
                 "step", 1,

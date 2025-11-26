@@ -57,7 +57,7 @@ curl -G "http://localhost:8080/ai/chat/knowledge/search" \
 
 ### 2.4 查看知识库统计
 
-curl "http://localhost:8080/ai/chat/knowledge/stats"---
+curl "http://localhost:8080/ai/chat/knowledge/stats"
 
 ## 3️⃣ Text-to-SQL & 成绩系统
 
