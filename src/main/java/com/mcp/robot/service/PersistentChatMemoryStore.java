@@ -10,6 +10,8 @@ import dev.langchain4j.data.message.ChatMessageSerializer;
 import dev.langchain4j.store.memory.chat.ChatMemoryStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,9 +19,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * 基于 MySQL + MyBatis-Plus 的聊天记忆持久化存储
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -31,11 +30,11 @@ public class PersistentChatMemoryStore implements ChatMemoryStore {
      * 获取指定会话的所有消息
      */
     @Override
+    @Cacheable(value = "chatMemory", key = "#memoryId.toString()")
     public List<ChatMessage> getMessages(Object memoryId) {
         String memoryIdStr = memoryId.toString();
-        log.info("获取会话记录, memoryId: {}", memoryIdStr);
+        log.info("从数据库获取会话记录, memoryId: {}", memoryIdStr);
 
-        // 使用 MyBatis-Plus 的 LambdaQueryWrapper 查询
         LambdaQueryWrapper<ChatMemoryEntity> queryWrapper = Wrappers.lambdaQuery();
         queryWrapper.eq(ChatMemoryEntity::getMemoryId, memoryIdStr)
                 .orderByAsc(ChatMemoryEntity::getCreatedTime);
@@ -43,7 +42,6 @@ public class PersistentChatMemoryStore implements ChatMemoryStore {
         List<ChatMemoryEntity> entities = chatMemoryMapper.selectList(queryWrapper);
         log.info("查询到 {} 条历史消息", entities.size());
 
-        // 反序列化为 ChatMessage 对象
         return entities.stream()
                 .map(entity -> {
                     try {
@@ -58,19 +56,19 @@ public class PersistentChatMemoryStore implements ChatMemoryStore {
     }
 
     /**
-     * 更新会话消息（增量保存最新的一条）
+     * 更新会话消息
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "chatMemory", key = "#memoryId.toString()")
     public void updateMessages(Object memoryId, List<ChatMessage> messages) {
         String memoryIdStr = memoryId.toString();
 
         if (messages == null || messages.isEmpty()) {
-            log.warn(" 消息列表为空, memoryId: {}", memoryIdStr);
+            log.warn("消息列表为空, memoryId: {}", memoryIdStr);
             return;
         }
 
-        // 只保存最新的一条消息（增量更新）
         ChatMessage lastMessage = messages.get(messages.size() - 1);
 
         ChatMemoryEntity entity = new ChatMemoryEntity();
@@ -81,7 +79,7 @@ public class PersistentChatMemoryStore implements ChatMemoryStore {
 
         chatMemoryMapper.insert(entity);
 
-        log.info("保存消息成功, memoryId: {}, type: {}", memoryIdStr, lastMessage.type());
+        log.info("💾 保存消息成功并清除缓存, memoryId: {}, type: {}", memoryIdStr, lastMessage.type());
     }
 
     /**
@@ -89,6 +87,7 @@ public class PersistentChatMemoryStore implements ChatMemoryStore {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "chatMemory", key = "#memoryId.toString()")
     public void deleteMessages(Object memoryId) {
         String memoryIdStr = memoryId.toString();
         log.info("删除会话记录, memoryId: {}", memoryIdStr);
