@@ -7,6 +7,7 @@
       </div>
       <div class="nav-menu">
         <router-link to="/" class="nav-item">首页</router-link>
+        <router-link to="/unified" class="nav-item">🎯 统一对话</router-link>
         <router-link to="/chat" class="nav-item">对话</router-link>
         <router-link to="/sql" class="nav-item">SQL助手</router-link>
         <router-link to="/knowledge" class="nav-item">知识库</router-link>
