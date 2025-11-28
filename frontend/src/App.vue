@@ -6,13 +6,13 @@
         <span class="title">Robot AI Assistant</span>
       </div>
       <div class="nav-menu">
-        <router-link to="/" class="nav-item">首页</router-link>
+        <router-link to="/" class="nav-item">🏠 首页</router-link>
         <router-link to="/unified" class="nav-item">🎯 统一对话</router-link>
-        <router-link to="/chat" class="nav-item">对话</router-link>
-        <router-link to="/sql" class="nav-item">SQL助手</router-link>
-        <router-link to="/knowledge" class="nav-item">知识库</router-link>
-        <router-link to="/agent" class="nav-item">AI Agent</router-link>
-        <router-link to="/mcp" class="nav-item">MCP工具</router-link>
+        <router-link to="/chat" class="nav-item">💬 对话</router-link>
+        <router-link to="/sql" class="nav-item">🗄️ SQL</router-link>
+        <router-link to="/knowledge" class="nav-item">📚 知识库</router-link>
+        <router-link to="/agent" class="nav-item">🤖 Agent</router-link>
+        <router-link to="/mcp" class="nav-item">🔌 MCP</router-link>
       </div>
     </nav>
     <main class="main-content">

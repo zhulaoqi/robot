@@ -51,16 +51,16 @@ export const analyzeData = (request) => api.get('/chat/agent/analyze-data', { pa
 export const planExecuteDemo = (task) => api.get('/agent-demo/mode/plan-execute', { params: { task } })
 export const reflexionDemo = (task) => api.get('/agent-demo/mode/reflexion', { params: { task } })
 export const cotDemo = (problem) => api.get('/agent-demo/mode/chain-of-thought', { params: { problem } })
-export const routerDemo = (input) => api.get('/agent-demo/router', { params: { input } })
-export const orchestrate = (request) => api.get('/agent-demo/orchestration', { params: { request } })
+export const routerDemo = (input) => api.post('/agent-demo/smart-route', null, { params: { input } })
+export const orchestrate = (request) => api.post('/agent-demo/orchestration', null, { params: { request } })
 
 // 交互式任务
 export const startTask = (request) => api.post('/agent-demo/interactive/start', null, { params: { request } })
-export const pauseTask = (taskId) => api.post(`/agent-demo/interactive/pause/${taskId}`)
-export const resumeTask = (taskId) => api.post(`/agent-demo/interactive/resume/${taskId}`)
-export const stopTask = (taskId) => api.post(`/agent-demo/interactive/stop/${taskId}`)
-export const getTaskStatus = (taskId) => api.get(`/agent-demo/interactive/status/${taskId}`)
-export const listTasks = () => api.get('/agent-demo/interactive/list')
+export const pauseTask = (taskId) => api.post(`/agent-demo/interactive/${taskId}/pause`)
+export const resumeTask = (taskId) => api.post(`/agent-demo/interactive/${taskId}/resume`)
+export const stopTask = (taskId) => api.post(`/agent-demo/interactive/${taskId}/stop`)
+export const getTaskStatus = (taskId) => api.get(`/agent-demo/interactive/${taskId}/status`)
+export const listTasks = () => api.get('/agent-demo/interactive/tasks')
 
 // MCP 功能
 export const mcpChat = (message) => api.get('/chat/mcp/chat', { params: { message } })

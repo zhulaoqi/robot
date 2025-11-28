@@ -41,22 +41,18 @@
       
       <button @click="loadTools" class="btn btn-secondary">刷新列表</button>
 
-      <div v-if="tools.java_tools || tools.mcp_tools" class="tools-grid">
-        <div class="tools-section">
-          <h3>Java 工具 ({{ tools.java_tools?.length || 0 }})</h3>
-          <div v-for="tool in tools.java_tools" :key="tool.name" class="tool-item">
+      <div v-if="Object.keys(toolsByServer).length > 0" class="tools-grid">
+        <div v-for="(tools, serverName) in toolsByServer" :key="serverName" class="tools-section">
+          <h3>{{ serverName }} ({{ tools.length }})</h3>
+          <div v-for="tool in tools" :key="tool.name" class="tool-item">
             <div class="tool-name">{{ tool.name }}</div>
             <div class="tool-desc">{{ tool.description }}</div>
           </div>
         </div>
-
-        <div class="tools-section">
-          <h3>MCP 工具 ({{ tools.mcp_tools?.length || 0 }})</h3>
-          <div v-for="tool in tools.mcp_tools" :key="tool.name" class="tool-item">
-            <div class="tool-name">{{ tool.name }}</div>
-            <div class="tool-desc">{{ tool.description }}</div>
-          </div>
-        </div>
+      </div>
+      
+      <div v-else class="empty-state">
+        暂无工具，请点击刷新按钮加载
       </div>
     </div>
 
@@ -95,7 +91,7 @@ const loading = ref(false)
 const result = ref('')
 
 const servers = ref([])
-const tools = ref({})
+const toolsByServer = ref({})
 
 const toolName = ref('')
 const toolArgs = ref('')
@@ -130,9 +126,11 @@ const loadServers = async () => {
 const loadTools = async () => {
   try {
     const res = await listMcpTools()
-    tools.value = res.data
+    toolsByServer.value = res.data || {}
+    console.log('加载的工具列表:', toolsByServer.value)
   } catch (error) {
-    alert('加载失败: ' + error.message)
+    console.error('加载工具失败:', error)
+    alert('加载失败: ' + (error.response?.data || error.message))
   }
 }
 

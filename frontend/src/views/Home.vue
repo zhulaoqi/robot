@@ -97,9 +97,20 @@ const loadStats = async () => {
       listTasks(),
       listMcpTools()
     ])
-    stats.value.knowledge = knowledgeRes.data.total || 0
-    stats.value.tasks = tasksRes.data.length || 0
-    stats.value.tools = (toolsRes.data.java_tools?.length || 0) + (toolsRes.data.mcp_tools?.length || 0)
+    stats.value.knowledge = knowledgeRes.data.total_vectors || 0
+    stats.value.tasks = tasksRes.data.total || 0
+    
+    // 计算工具数量
+    let toolCount = 0
+    if (toolsRes.data) {
+      // 遍历所有服务器的工具
+      for (const [serverName, tools] of Object.entries(toolsRes.data)) {
+        if (Array.isArray(tools)) {
+          toolCount += tools.length
+        }
+      }
+    }
+    stats.value.tools = toolCount
   } catch (error) {
     console.error('加载统计信息失败:', error)
   }

@@ -1,6 +1,7 @@
 package com.mcp.robot.service.agent;
 
 import com.mcp.robot.service.AgentService;
+import com.mcp.robot.service.UnifiedAgentService;
 import dev.langchain4j.model.chat.ChatModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,7 @@ public class AgentRouterService {
 
     private final ChatModel chatModel;
     private final AgentService agentService;
+    private final UnifiedAgentService unifiedAgentService;  // ✅ 添加统一服务（带知识库）
     private final PlanAndExecuteAgent planAndExecuteAgent;
     private final ReflexionAgent reflexionAgent;
     private final ChainOfThoughtAgent chainOfThoughtAgent;
@@ -51,12 +53,13 @@ public class AgentRouterService {
         // 步骤 3: 执行对应模式
         Map<String, Object> result = executeMode(finalMode, userInput);
 
-        // 添加路由信息
-        result.put("routing_info", Map.of(
-                "selected_mode", finalMode.name(),
-                "routing_method", ruleMode != null ? "rule-based" : "ai-based",
-                "routing_duration_ms", routeDuration
-        ));
+        // 添加路由信息（使用可变 Map）
+        Map<String, Object> routingInfo = new HashMap<>();
+        routingInfo.put("selected_mode", finalMode.name());
+        routingInfo.put("routing_method", ruleMode != null ? "rule-based" : "ai-based");
+        routingInfo.put("routing_duration_ms", routeDuration);
+        
+        result.put("routing_info", routingInfo);
 
         return result;
     }
@@ -129,10 +132,13 @@ public class AgentRouterService {
      */
     private Map<String, Object> executeMode(AgentMode mode, String input) {
         return switch (mode) {
-            case REACT -> Map.of(
-                    "mode", "ReAct",
-                    "result", agentService.generalAssist(input)
-            );
+            case REACT -> {
+                Map<String, Object> result = new HashMap<>();
+                result.put("mode", "ReAct");
+                // ✅ 使用 UnifiedAgentService（带知识库能力）
+                result.put("result", unifiedAgentService.chat(input));
+                yield result;
+            }
 
             case CHAIN_OF_THOUGHT -> chainOfThoughtAgent.solve(input);
 
