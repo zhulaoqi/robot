@@ -251,6 +251,28 @@ graph TB
 
 ## 🚀 快速开始
 
+### 🎨 前端管理界面（新增！）
+
+本项目现已集成 **Vue 3 前端管理界面**，可视化测试所有功能！
+
+**3 步启动**：
+
+```bash
+# 1. 构建前端
+cd frontend && ./build.sh    # Mac/Linux
+cd frontend && build.bat     # Windows
+
+# 2. 启动后端
+cd .. && mvn spring-boot:run
+
+# 3. 访问界面
+http://localhost:8080
+```
+
+详细说明：[前端快速启动指南](docs/QUICKSTART_FRONTEND.md)
+
+---
+
 ### 方式一：Docker 一键部署
 
 最快的启动方式，无需安装 Java、MySQL、Python 等依赖。
