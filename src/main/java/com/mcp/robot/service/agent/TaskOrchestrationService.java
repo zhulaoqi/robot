@@ -17,9 +17,9 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class TaskOrchestrationService {
-
+    
     private final ChatModel chatModel;
-    private final AgentService agentService;
+    private final TaskExecutorFactory executorFactory;
 
     /**
      * 完整的任务编排流程
@@ -43,7 +43,7 @@ public class TaskOrchestrationService {
         phases.add(planningPhase);
 
         @SuppressWarnings("unchecked")
-        List<Map<String, String>> tasks = (List<Map<String, String>>) planningPhase.get("tasks");
+        List<Map<String, Object>> tasks = (List<Map<String, Object>>) planningPhase.get("tasks");
 
         // ========== 阶段 3: 任务执行 ==========
         log.info("阶段 3: 任务执行");
@@ -108,7 +108,7 @@ public class TaskOrchestrationService {
     }
 
     /**
-     * 阶段 2: 任务规划
+     * 阶段 2: 任务规划（带类型识别）
      */
     private Map<String, Object> planTasks(String userRequest, Map<String, Object> intent) {
         long start = System.currentTimeMillis();
@@ -119,48 +119,63 @@ public class TaskOrchestrationService {
                 用户请求：%s
                 意图分析：%s
                 
-                可用能力：
-                - 数据库查询（SQL）
-                - 数据分析和计算
-                - 信息检索
-                - 文本生成
+                可用的任务类型：
+                - SQL_QUERY: 需要查询数据库（会自动检索 DDL 并生成 SQL）
+                - DATA_ANALYSIS: 需要分析数据（会先查询再分析）
+                - TOOL_CALL: 需要调用工具（天气、地点、时间等）
+                - KNOWLEDGE_SEARCH: 需要检索知识库
+                - CALCULATION: 需要数学计算
+                - MCP_TOOL: 需要调用 Python MCP 工具（复杂计算、文件操作等）
+                - CODE_GENERATION: 需要生成代码（会自我检查）
+                - TEXT_GENERATION: 需要生成文本
                 
                 请将任务分解为 3-5 个具体步骤，每个步骤格式：
-                1. [动作类型] 步骤描述
-                2. [动作类型] 步骤描述
+                1. [任务类型] 步骤描述
+                2. [任务类型] 步骤描述
                 
-                动作类型可选：查询、分析、计算、生成、总结
+                示例：
+                1. [SQL_QUERY] 查询学生成绩数据
+                2. [DATA_ANALYSIS] 分析成绩分布情况
+                3. [TEXT_GENERATION] 生成分析报告
                 """, userRequest, intent.get("raw_analysis"));
 
         String plan = chatModel.chat(planPrompt);
         long duration = System.currentTimeMillis() - start;
 
-        // 解析任务列表
-        List<Map<String, String>> tasks = new ArrayList<>();
+        // 解析任务列表（带类型）
+        List<Map<String, Object>> tasks = new ArrayList<>();
         String[] lines = plan.split("\n");
 
         for (String line : lines) {
             if (line.matches("^\\d+\\..*")) {
                 String taskDesc = line.replaceFirst("^\\d+\\.\\s*", "");
-                String action = "执行";
+                
+                // 提取任务类型
+                TaskType taskType = TaskType.TEXT_GENERATION; // 默认
+                String description = taskDesc;
 
                 if (taskDesc.startsWith("[")) {
                     int endBracket = taskDesc.indexOf("]");
                     if (endBracket > 0) {
-                        action = taskDesc.substring(1, endBracket);
-                        taskDesc = taskDesc.substring(endBracket + 1).trim();
+                        String typeStr = taskDesc.substring(1, endBracket);
+                        try {
+                            taskType = TaskType.valueOf(typeStr);
+                        } catch (IllegalArgumentException e) {
+                            log.warn("⚠️ 未知任务类型: {}，使用默认类型", typeStr);
+                        }
+                        description = taskDesc.substring(endBracket + 1).trim();
                     }
                 }
 
                 tasks.add(Map.of(
                         "task_id", String.valueOf(tasks.size() + 1),
-                        "action", action,
-                        "description", taskDesc
+                        "type", taskType,
+                        "description", description
                 ));
             }
         }
 
-        log.info("任务规划完成，共 {} 个任务", tasks.size());
+        log.info("✅ 任务规划完成，共 {} 个任务", tasks.size());
 
         return Map.of(
                 "phase", "task_planning",
@@ -172,52 +187,67 @@ public class TaskOrchestrationService {
     }
 
     /**
-     * 阶段 3: 任务执行
+     * 阶段 3: 任务执行（使用执行器工厂）
      */
-    private Map<String, Object> executeTasks(List<Map<String, String>> tasks) {
+    private Map<String, Object> executeTasks(List<Map<String, Object>> tasks) {
         List<Map<String, Object>> results = new ArrayList<>();
         long totalDuration = 0;
-
-        for (Map<String, String> task : tasks) {
-            String taskId = task.get("task_id");
-            String action = task.get("action");
-            String description = task.get("description");
-
-            log.info("🔧 执行任务 {}: {}", taskId, description);
-
+        
+        // 准备上下文
+        Map<String, Object> context = new HashMap<>();
+        context.put("memory_id", "orchestration-" + System.currentTimeMillis());
+        
+        for (Map<String, Object> task : tasks) {
+            String taskId = (String) task.get("task_id");
+            TaskType taskType = (TaskType) task.get("type");
+            String description = (String) task.get("description");
+            
+            log.info("🔧 执行任务 {}: [{}] {}", taskId, taskType, description);
+            
             long start = System.currentTimeMillis();
-
-            // 根据动作类型执行不同的逻辑
-            String result = switch (action) {
-                case "查询" -> executeQuery(description);
-                case "分析" -> executeAnalysis(description);
-                case "计算" -> executeCalculation(description);
-                case "生成" -> executeGeneration(description);
-                case "总结" -> executeSummary(description);
-                default -> agentService.generalAssist(description);
-            };
-
-            long duration = System.currentTimeMillis() - start;
-            totalDuration += duration;
-
-            results.add(Map.of(
+            
+            try {
+                // 使用执行器工厂动态路由
+                String result = executorFactory.executeTask(taskType, description, context);
+                long duration = System.currentTimeMillis() - start;
+                totalDuration += duration;
+                
+                results.add(Map.of(
                     "task_id", taskId,
-                    "action", action,
+                    "type", taskType.name(),
                     "description", description,
                     "result", result,
                     "duration_ms", duration,
                     "status", "completed"
-            ));
-
-            log.info("✅ 任务 {} 完成", taskId);
+                ));
+                
+                log.info("✅ 任务 {} 完成", taskId);
+                
+            } catch (Exception e) {
+                log.error("❌ 任务 {} 执行失败", taskId, e);
+                
+                long duration = System.currentTimeMillis() - start;
+                totalDuration += duration;
+                
+                results.add(Map.of(
+                    "task_id", taskId,
+                    "type", taskType.name(),
+                    "description", description,
+                    "error", e.getMessage(),
+                    "duration_ms", duration,
+                    "status", "failed"
+                ));
+            }
         }
-
+        
         return Map.of(
-                "phase", "task_execution",
-                "name", "任务执行",
-                "results", results,
-                "total_tasks", tasks.size(),
-                "duration_ms", totalDuration
+            "phase", "task_execution",
+            "name", "任务执行",
+            "results", results,
+            "total_tasks", tasks.size(),
+            "success_count", results.stream().filter(r -> "completed".equals(r.get("status"))).count(),
+            "failed_count", results.stream().filter(r -> "failed".equals(r.get("status"))).count(),
+            "duration_ms", totalDuration
         );
     }
 
@@ -264,26 +294,6 @@ public class TaskOrchestrationService {
     }
 
     // ========== 辅助方法 ==========
-
-    private String executeQuery(String description) {
-        return agentService.generalAssist("执行查询：" + description);
-    }
-
-    private String executeAnalysis(String description) {
-        return chatModel.chat("分析以下内容：" + description);
-    }
-
-    private String executeCalculation(String description) {
-        return chatModel.chat("计算：" + description);
-    }
-
-    private String executeGeneration(String description) {
-        return chatModel.chat("生成：" + description);
-    }
-
-    private String executeSummary(String description) {
-        return chatModel.chat("总结：" + description);
-    }
 
     private String extractValue(String json, String key) {
         try {

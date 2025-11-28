@@ -698,6 +698,447 @@ AI:
 
 ---
 
+## 🎓 AI 应用开发最佳实践
+
+本项目是一个完整的 AI 应用学习案例，涵盖了从基础对话到复杂任务编排的全流程。以下是在开发过程中总结的核心经验和技巧。
+
+### 1️⃣ Prompt 工程技巧
+
+#### 🎯 核心原则
+
+- **明确角色定位**: 在 `@SystemMessage` 中清晰定义 AI 的角色和能力边界
+- **提供上下文**: 使用 RAG 注入相关知识（如数据库 DDL），让 AI 基于事实回答
+- **结构化输出**: 使用 `@UserMessage` + 模板变量控制输出格式
+- **Few-shot 示例**: 在 Prompt 中提供 2-3 个示例，显著提升准确性
+
+#### 💡 实战技巧
+
+```java
+// ✅ 好的 Prompt 设计
+@SystemMessage("""
+    你是一个专业的 SQL 助手，专注于学生管理系统。
+    
+    核心能力：
+    - 将自然语言转换为标准 SQL
+    - 对课程名使用 LIKE 模糊匹配
+    - 优先使用索引字段提升性能
+    
+    示例：
+    输入："查询计算机学院的学生"
+    输出：SELECT * FROM students WHERE department_id = 
+          (SELECT id FROM departments WHERE name LIKE '%计算机%')
+    
+    注意事项：
+    - 必须返回可执行的 SQL 语句
+    - 避免使用 SELECT *，明确列名
+    - 添加必要的 WHERE 条件防止全表扫描
+    """)
+```
+
+#### 🔥 热更新 Prompt
+
+使用 `PromptManager` + `@V` 注解实现运行时 Prompt 修改：
+
+```java
+// 定义动态 Prompt 接口
+@AiService
+public interface DynamicSqlAssistantService {
+    @SystemMessage("{{systemPrompt}}")  // 使用模板变量
+    String chatWithSql(
+        @MemoryId String memoryId,
+        @V("systemPrompt") String systemPrompt,  // 运行时注入
+        @UserMessage String userMessage
+    );
+}
+
+// 使用时从 PromptManager 获取最新 Prompt
+String prompt = promptManager.getPrompt("sql_expert");
+String result = service.chatWithSql(memoryId, prompt, userMessage);
+```
+
+**优势**：
+- ✅ 无需重启应用即可优化 AI 行为
+- ✅ 支持 A/B 测试不同 Prompt 版本
+- ✅ 生产环境快速修复 AI 错误
+
+---
+
+### 2️⃣ RAG 检索优化技巧
+
+#### 🔍 参数调优
+
+```java
+ContentRetriever retriever = EmbeddingStoreContentRetriever.builder()
+    .embeddingStore(embeddingStore)
+    .embeddingModel(embeddingModel)
+    .maxResults(10)      // 检索数量：5-20（越多越准确但 Token 消耗越大)
+    .minScore(0.3)       // 相似度阈值：0.3-0.7（越低召回越多）
+    .build();
+```
+
+| 场景         | maxResults | minScore | 说明                |
+|------------|------------|----------|-------------------|
+| 精确匹配       | 5          | 0.6      | 只返回高度相关的结果        |
+| 广泛召回       | 15         | 0.3      | 宁可错检不可漏检          |
+| 平衡方案（推荐）   | 10         | 0.4      | 准确性和召回率的平衡        |
+| 长文档问答      | 20         | 0.35     | 需要更多上下文信息         |
+
+#### 🎯 高级 RAG 技术
+
+**1. 查询改写（Query Rewriting）**
+
+将用户的简短查询扩展为详细描述，提升检索精度：
+
+```java
+// 原始查询: "学生成绩"
+// 扩展后: "查询学生的考试成绩，包括学号、姓名、课程名称、分数等信息"
+String expandedQuery = queryTransformService.expandQuery(originalQuery);
+```
+
+**2. 多查询检索（Multi-Query）**
+
+从多个角度理解问题，合并检索结果：
+
+```java
+// 原始问题: "如何提高成绩？"
+// 生成多个查询:
+// - "学生成绩提升方法"
+// - "学习效率优化技巧"
+// - "考试成绩影响因素"
+List<String> queries = queryTransformService.generateMultipleQueries(question);
+```
+
+**3. Step-back 查询**
+
+先检索背景知识，再回答具体问题：
+
+```java
+// 具体问题: "张三的数学成绩是多少？"
+// Step-back: "学生成绩查询的数据表结构是什么？"
+String backgroundQuery = queryTransformService.generateStepBackQuery(question);
+```
+
+#### ⚠️ 常见陷阱
+
+- **❌ 全局 RAG**: 不要对所有接口都启用 `contentRetriever`，会导致无关知识注入
+- **✅ 按需 RAG**: 为不同场景创建独立的 `@AiService` 接口
+
+```java
+// ❌ 错误：全局启用 RAG
+@AiService(contentRetriever = "contentRetriever")  // 所有方法都会检索
+public interface AiService {
+    String generateSQL(String query);      // 需要 RAG ✅
+    String mockUsernames(int count);       // 不需要 RAG ❌
+}
+
+// ✅ 正确：按场景拆分
+@AiService(contentRetriever = "contentRetriever")
+public interface SqlAssistantService {
+    String generateSQL(String query);  // 只有 SQL 生成需要 RAG
+}
+
+@AiService  // 不启用 RAG
+public interface DataGeneratorService {
+    String mockUsernames(int count);  // 纯文本生成
+}
+```
+
+---
+
+### 3️⃣ AI Agent 任务编排
+
+#### 🤖 多种 Agent 模式
+
+本项目实现了 4 种主流 Agent 模式：
+
+| 模式                         | 特点            | 适用场景          |
+|----------------------------|---------------|---------------|
+| **ReAct**                  | AI 自主决策工具调用  | 通用任务（默认）      |
+| **Plan-and-Execute**       | 先规划再执行        | 复杂多步骤任务       |
+| **Reflexion**              | 执行 → 反思 → 改进 | 代码生成、需要自我检查的任务 |
+| **Chain of Thought (CoT)** | 显示推理过程        | 数学题、逻辑推理      |
+
+#### 🧭 智能路由机制
+
+使用 `AgentRouterService` 自动选择合适的 Agent 模式：
+
+```java
+// 规则路由 + AI 路由混合
+Map<String, Object> result = agentRouterService.route(userInput);
+
+// 路由逻辑：
+// - "帮我规划..." → Plan-and-Execute
+// - "写一个函数..." → Reflexion
+// - "计算..." → Chain of Thought
+// - 其他 → ReAct
+```
+
+#### 📋 任务编排流程
+
+完整的任务编排包含 4 个阶段：
+
+```
+1️⃣ 意图理解 → 2️⃣ 任务规划 → 3️⃣ 逐步执行 → 4️⃣ 结果汇总
+```
+
+**关键设计**：
+
+```java
+// 使用执行器工厂模式，自动路由到正确的执行器
+Map<String, Object> result = orchestrationService.orchestrate(userRequest);
+
+// 任务类型自动识别：
+// - SQL_QUERY: 查询数据库（自动检索 DDL + 生成 SQL）
+// - DATA_ANALYSIS: 数据分析（先查询再分析）
+// - TOOL_CALL: 调用工具（天气、地点等）
+// - CALCULATION: 数学计算
+// - MCP_TOOL: Python 工具调用
+// - TEXT_GENERATION: 文本生成
+```
+
+#### 🏭 执行器工厂模式
+
+**核心优势**：
+- ✅ 自动注册：Spring 自动扫描所有 `TaskExecutor` 实现类
+- ✅ 动态路由：根据任务类型自动选择执行器
+- ✅ 易于扩展：新增执行器只需实现 `TaskExecutor` 接口
+
+```java
+// 1. 定义执行器接口
+public interface TaskExecutor {
+    String execute(String taskDescription, Map<String, Object> context);
+    TaskType supportedType();
+}
+
+// 2. 实现具体执行器
+@Component
+public class SqlQueryExecutor implements TaskExecutor {
+    public String execute(String task, Map<String, Object> context) {
+        // 执行 SQL 查询逻辑
+    }
+    public TaskType supportedType() {
+        return TaskType.SQL_QUERY;
+    }
+}
+
+// 3. 工厂自动注册
+@Component
+public class TaskExecutorFactory {
+    public TaskExecutorFactory(List<TaskExecutor> executorList) {
+        // Spring 自动注入所有执行器
+        for (TaskExecutor executor : executorList) {
+            executors.put(executor.supportedType(), executor);
+        }
+    }
+}
+
+// 4. 使用工厂执行任务
+String result = executorFactory.executeTask(TaskType.SQL_QUERY, "查询学生", context);
+```
+
+---
+
+### 4️⃣ 交互式 AI 体验
+
+#### 🎬 流式输出（SSE）
+
+使用 Server-Sent Events 实现类似 ChatGPT 的打字机效果：
+
+```java
+@GetMapping(value = "/stream", produces = "text/event-stream")
+public Flux<String> streamChat(@RequestParam String message) {
+    return Flux.create(sink -> {
+        streamingChatModel.generate(message, new StreamingResponseHandler<>() {
+            public void onNext(String token) {
+                sink.next("data: " + token + "\n\n");
+            }
+            public void onComplete(Response<AiMessage> response) {
+                sink.complete();
+            }
+        });
+    });
+}
+```
+
+#### 🛑 任务控制（Stop-and-Go）
+
+实现任务的暂停、恢复、停止：
+
+```java
+// 启动任务
+String taskId = interactiveTaskService.startTask(userRequest);
+
+// 暂停任务
+interactiveTaskService.pauseTask(taskId);
+
+// 恢复任务
+interactiveTaskService.resumeTask(taskId);
+
+// 停止任务
+interactiveTaskService.stopTask(taskId);
+
+// 查询状态
+Map<String, Object> status = interactiveTaskService.getTaskStatus(taskId);
+```
+
+#### 📡 实时进度推送
+
+使用 SSE 推送任务执行的每个阶段：
+
+```java
+@GetMapping(value = "/orchestration/streaming", produces = "text/event-stream")
+public Flux<String> orchestrateStreaming(@RequestParam String request) {
+    return streamingOrchestration.orchestrateWithStreaming(request);
+}
+
+// 前端接收事件：
+// event: intent_analysis → 意图理解完成
+// event: task_planning → 任务规划完成
+// event: task_start → 开始执行任务 1
+// event: task_complete → 任务 1 完成
+// event: summary → 最终结果汇总
+```
+
+**用户体验**：
+- ✅ 实时可见：用户能看到 AI 的思考过程
+- ✅ 可控性强：可以随时暂停或停止任务
+- ✅ 类似 Cursor：与 Cursor AI 的交互体验一致
+
+---
+
+### 5️⃣ 性能优化技巧
+
+#### 💾 对话记忆缓存
+
+避免每次都查询数据库：
+
+```java
+@Cacheable(value = "chatMemory", key = "#memoryId.toString()")
+public List<ChatMessage> getMessages(Object memoryId) {
+    // 首次查询数据库，后续从缓存读取
+}
+
+@CacheEvict(value = "chatMemory", key = "#memoryId.toString()")
+public void updateMessages(Object memoryId, List<ChatMessage> messages) {
+    // 更新时清除缓存
+}
+```
+
+#### 🔍 向量检索优化
+
+- **批量插入**: 使用 `addAll()` 代替逐条 `add()`
+- **索引优化**: 在 `embedding_id` 和 `created_time` 上建立索引
+- **分页查询**: 大规模检索时使用 `LIMIT` 分页
+
+#### 📊 日志调试
+
+开启详细日志查看 AI 交互细节：
+
+```yaml
+logging:
+  level:
+    dev.langchain4j: DEBUG           # Langchain4j 框架日志
+    com.mcp.robot: DEBUG             # 应用日志
+    com.mcp.robot.mapper: DEBUG      # MyBatis SQL 日志
+
+langchain4j:
+  open-ai:
+    chat-model:
+      log-requests: true             # 记录请求内容
+      log-responses: true            # 记录响应内容
+```
+
+---
+
+### 6️⃣ 常见问题解决
+
+#### ❓ Prompt 不生效？
+
+**原因**: `@SystemMessage` 是编译时固定的，无法热更新。
+
+**解决**: 使用 `@SystemMessage("{{systemPrompt}}")` + `@V("systemPrompt")` 动态注入。
+
+#### ❓ RAG 检索不到内容？
+
+**排查步骤**:
+1. 检查 `minScore` 是否过高（建议 0.3-0.4）
+2. 检查向量是否正确存储（`SELECT COUNT(*) FROM knowledge_embedding`）
+3. 检查查询是否与知识库内容相关
+4. 开启 DEBUG 日志查看检索过程
+
+#### ❓ 工具调用失败？
+
+**排查步骤**:
+1. 检查 `@Tool` 方法签名是否正确
+2. 检查 `description` 是否清晰描述了工具用途
+3. 检查外部 API Key 是否配置
+4. 查看日志中的工具调用记录
+
+#### ❓ MCP 工具不可用？
+
+**排查步骤**:
+1. 确认 Python MCP Server 已启动（`http://localhost:5001/tools`）
+2. 检查 `mcp.python.server.url` 配置
+3. 测试 MCP Server 是否可访问（`curl http://localhost:5001/tools`）
+4. 查看 MCP Server 日志
+
+---
+
+### 7️⃣ 最佳实践总结
+
+#### ✅ DO - 推荐做法
+
+- ✅ 为不同场景创建独立的 `@AiService` 接口
+- ✅ 使用 `PromptManager` 管理所有 Prompt
+- ✅ 在 Prompt 中提供 2-3 个示例（Few-shot）
+- ✅ 使用 `@V` 注解实现动态 Prompt
+- ✅ 对高频查询启用缓存（`@Cacheable`）
+- ✅ 使用执行器工厂模式管理多种任务类型
+- ✅ 开启 DEBUG 日志调试 AI 交互
+- ✅ 使用 SSE 实现流式输出和进度推送
+
+#### ❌ DON'T - 避免做法
+
+- ❌ 不要全局启用 `contentRetriever`（按需启用）
+- ❌ 不要在 `@SystemMessage` 中硬编码业务逻辑
+- ❌ 不要忽略 `minScore` 参数（会影响检索准确性）
+- ❌ 不要在生产环境使用 `temperature=1.0`（太随机）
+- ❌ 不要忘记清理测试数据（避免影响 RAG 检索）
+- ❌ 不要在 Prompt 中使用模糊的描述（要具体明确）
+
+---
+
+### 8️⃣ 学习路径建议
+
+**初学者**（0-1 周）:
+1. 跑通基础对话接口
+2. 理解 `@AiService` 和 `@Tool` 的工作原理
+3. 学习 Prompt 工程基础
+
+**进阶**（1-2 周）:
+1. 实现 RAG 知识库检索
+2. 学习 Text-to-SQL 实现
+3. 掌握 Prompt 热更新机制
+
+**高级**（2-4 周）:
+1. 实现多种 Agent 模式
+2. 构建任务编排系统
+3. 优化 RAG 检索策略
+4. 实现交互式 AI 体验（SSE + 任务控制）
+
+---
+
+### 9️⃣ 参考资料
+
+- 📖 [Langchain4j 官方文档](https://docs.langchain4j.dev/)
+- 🎓 [Prompt Engineering Guide](https://www.promptingguide.ai/)
+- 🔍 [RAG 技术详解](https://www.pinecone.io/learn/retrieval-augmented-generation/)
+- 🤖 [AI Agent 设计模式](https://www.deeplearning.ai/the-batch/)
+- 📝 [本项目 API 文档](docs/API.md)
+- 🚀 [Agent Demo 文档](docs/AGENT_DEMO.md)
+
+---
+
 ## 🤝 贡献指南
 
 我们欢迎所有形式的贡献！
