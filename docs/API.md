@@ -367,7 +367,11 @@ Content-Type: application/json
 **请求体**
 
 ```json
-["id1", "id2", "id3"]
+[
+  "id1",
+  "id2",
+  "id3"
+]
 ```
 
 **响应示例**
@@ -424,8 +428,8 @@ GET /ai/chat/{memoryId}/sql/generate?userMessage={query}
 ```json
 "根据你的需求，我生成了以下 SQL 语句：
 
-SELECT student_no, name, email 
-FROM students 
+SELECT student_no, name, email
+FROM students
 WHERE status = '在读'
 ORDER BY student_no;
 
@@ -654,7 +658,9 @@ GET /ai/chat/rag/demo-full-process?query={query}
       "step": 2,
       "name": "向量检索",
       "results_count": 5,
-      "results": [...],
+      "results": [
+        ...
+      ],
       "duration_ms": 456
     },
     {

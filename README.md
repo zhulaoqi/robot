@@ -280,6 +280,7 @@ cd docker && docker-compose up -d
 ```
 
 服务启动后：
+
 - Java 主服务：http://localhost:8080
 - Python MCP Server：http://localhost:5001
 - MySQL：localhost:3306
@@ -513,11 +514,11 @@ external-api:
 
 ```java
 ContentRetriever retriever = EmbeddingStoreContentRetriever.builder()
-    .embeddingStore(embeddingStore)
-    .embeddingModel(embeddingModel)
-    .maxResults(10)      // 检索数量：5-20
-    .minScore(0.3)       // 相似度阈值：0.3-0.7
-    .build();
+        .embeddingStore(embeddingStore)
+        .embeddingModel(embeddingModel)
+        .maxResults(10)      // 检索数量：5-20
+        .minScore(0.3)       // 相似度阈值：0.3-0.7
+        .build();
 ```
 
 ### 性能优化建议

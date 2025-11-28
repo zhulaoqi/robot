@@ -115,10 +115,10 @@ def health_check():
 
 if __name__ == "__main__":
     import os
-    
+
     # 支持通过环境变量配置端口
     port = int(os.getenv("MCP_PORT", 5001))
-    
+
     print("Python MCP Server 启动中...")
     print(f"监听地址: http://0.0.0.0:{port}")
     print("API文档:")

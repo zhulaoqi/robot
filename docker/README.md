@@ -78,9 +78,11 @@ vi .env
 ```
 
 必填项：
+
 - `QWEN_API_KEY`: 通义千问 API Key（必填）
 
 可选项：
+
 - `AMAP_API_KEY`: 高德地图 API Key（用于天气查询功能）
 - `MYSQL_ROOT_PASSWORD`: MySQL root 密码
 - `MYSQL_DATABASE`: 数据库名称
@@ -139,11 +141,11 @@ docker exec robot-mysql mysqladmin ping -h localhost
 
 ### 端口映射
 
-| 服务 | 容器端口 | 宿主机端口 | 说明 |
-|------|---------|----------|------|
-| robot-app | 8080 | 8080 | Java 主服务 API |
-| python-mcp | 5001 | 5001 | Python MCP Server |
-| mysql | 3306 | 3306 | MySQL 数据库 |
+| 服务         | 容器端口 | 宿主机端口 | 说明                |
+|------------|------|-------|-------------------|
+| robot-app  | 8080 | 8080  | Java 主服务 API      |
+| python-mcp | 5001 | 5001  | Python MCP Server |
+| mysql      | 3306 | 3306  | MySQL 数据库         |
 
 ### 数据持久化
 
