@@ -51,9 +51,12 @@ public class AgentRouterService {
         log.info("最终路由到: {}", finalMode);
 
         // 步骤 3: 执行对应模式
-        Map<String, Object> result = executeMode(finalMode, userInput);
+        Map<String, Object> executionResult = executeMode(finalMode, userInput);
 
-        // 添加路由信息（使用可变 Map）
+        // 将不可变 Map 复制到可变 Map
+        Map<String, Object> result = new HashMap<>(executionResult);
+
+        // 添加路由信息
         Map<String, Object> routingInfo = new HashMap<>();
         routingInfo.put("selected_mode", finalMode.name());
         routingInfo.put("routing_method", ruleMode != null ? "rule-based" : "ai-based");

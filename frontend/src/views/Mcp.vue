@@ -83,7 +83,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { mcpChat, listMcpServers, listMcpTools, executeMcpTool } from '../api'
 
 const message = ref('')
@@ -97,6 +97,12 @@ const toolName = ref('')
 const toolArgs = ref('')
 const executing = ref(false)
 const toolResult = ref('')
+
+// 页面加载时自动刷新
+onMounted(() => {
+  loadServers()
+  loadTools()
+})
 
 const sendMessage = async () => {
   if (!message.value.trim()) return
@@ -117,9 +123,11 @@ const sendMessage = async () => {
 const loadServers = async () => {
   try {
     const res = await listMcpServers()
-    servers.value = res.data
+    servers.value = res.data || []
+    console.log('加载的服务器列表:', servers.value)
   } catch (error) {
-    alert('加载失败: ' + error.message)
+    console.error('加载服务器失败:', error)
+    alert('加载失败: ' + (error.response?.data || error.message))
   }
 }
 

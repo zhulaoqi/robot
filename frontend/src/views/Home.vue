@@ -50,7 +50,10 @@
     </div>
 
     <div class="stats card">
-      <h2 class="card-title">系统状态</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 class="card-title" style="margin: 0;">系统状态</h2>
+        <button @click="loadStats" class="btn btn-secondary btn-sm">🔄 刷新</button>
+      </div>
       <div class="stats-grid grid grid-3">
         <div class="stat-item">
           <div class="stat-value">{{ stats.knowledge }}</div>
@@ -91,28 +94,46 @@ const testing = ref(false)
 const testResult = ref('')
 
 const loadStats = async () => {
+  // 知识库统计
   try {
-    const [knowledgeRes, tasksRes, toolsRes] = await Promise.all([
-      getKnowledgeStats(),
-      listTasks(),
-      listMcpTools()
-    ])
+    const knowledgeRes = await getKnowledgeStats()
     stats.value.knowledge = knowledgeRes.data.total_vectors || 0
+    console.log('知识库条目:', stats.value.knowledge)
+  } catch (error) {
+    console.error('加载知识库统计失败:', error)
+    stats.value.knowledge = 0
+  }
+  
+  // 任务统计
+  try {
+    const tasksRes = await listTasks()
     stats.value.tasks = tasksRes.data.total || 0
+    console.log('运行中任务:', stats.value.tasks)
+  } catch (error) {
+    console.error('加载任务统计失败:', error)
+    stats.value.tasks = 0
+  }
+  
+  // 工具统计
+  try {
+    const toolsRes = await listMcpTools()
+    console.log('工具列表响应:', toolsRes.data)
     
-    // 计算工具数量
     let toolCount = 0
     if (toolsRes.data) {
       // 遍历所有服务器的工具
       for (const [serverName, tools] of Object.entries(toolsRes.data)) {
         if (Array.isArray(tools)) {
           toolCount += tools.length
+          console.log(`${serverName}: ${tools.length} 个工具`)
         }
       }
     }
     stats.value.tools = toolCount
+    console.log('可用工具总数:', toolCount)
   } catch (error) {
-    console.error('加载统计信息失败:', error)
+    console.error('加载工具列表失败:', error)
+    stats.value.tools = 0
   }
 }
 
@@ -228,6 +249,11 @@ onMounted(() => {
 
 .quick-test .btn {
   margin-top: 1rem;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
 }
 </style>
 
