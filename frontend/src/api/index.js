@@ -5,7 +5,24 @@ const api = axios.create({
   timeout: 60000
 })
 
-// 基础对话
+// ========== 统一对话接口（推荐用于生产） ==========
+const unifiedApi = axios.create({
+  baseURL: '/api/v1',
+  timeout: 60000
+})
+
+export const unifiedChat = (message, userId = 'default') => 
+  unifiedApi.get('/chat', { params: { message, userId } })
+
+export const unifiedChatOrchestration = (request, userId = 'default') => 
+  unifiedApi.get('/chat/orchestration', { params: { request, userId } })
+
+export const unifiedChatStream = (request, userId = 'default') => 
+  `/api/v1/chat/stream?request=${encodeURIComponent(request)}&userId=${userId}`
+
+export const healthCheck = () => unifiedApi.get('/health')
+
+// ========== 基础接口（用于学习和调试） ==========
 export const testChat = () => api.get('/chat/test')
 export const chat = (memoryId, message) => api.get('/chat', { params: { memoryId, userMessage: message } })
 export const streamChat = (memoryId, message) => api.get(`/chat/${memoryId}/stream/memory`, { params: { userMessage: message } })

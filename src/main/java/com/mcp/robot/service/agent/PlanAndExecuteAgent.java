@@ -1,5 +1,6 @@
 package com.mcp.robot.service.agent;
 
+import com.mcp.robot.service.AgentService;
 import dev.langchain4j.model.chat.ChatModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,13 +11,16 @@ import java.util.*;
 /**
  * Plan-and-Execute 模式
  * 先制定完整计划，再逐步执行
+ * 
+ * 注意：执行阶段使用 AgentService，可以调用工具完成实际任务
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PlanAndExecuteAgent {
 
-    private final ChatModel chatModel;
+    private final AgentService agentService;  // 有工具能力的 Agent
+    private final ChatModel chatModel;        // 用于规划
 
     public Map<String, Object> execute(String userRequest) {
         log.info("[Plan-and-Execute] 开始执行: {}", userRequest);
@@ -58,14 +62,14 @@ public class PlanAndExecuteAgent {
                 "duration_ms", planDuration
         ));
 
-        // 步骤 2: 逐个执行
+        // 步骤 2: 逐个执行（使用有工具能力的 AgentService）
         List<Map<String, Object>> executionResults = new ArrayList<>();
         for (int i = 0; i < taskSteps.size(); i++) {
             String step = taskSteps.get(i);
             log.info("🔧 执行步骤 {}/{}: {}", i + 1, taskSteps.size(), step);
 
             long execStart = System.currentTimeMillis();
-            String result = chatModel.chat("执行以下任务并给出结果：" + step);
+            String result = agentService.generalAssist(step);
             long execDuration = System.currentTimeMillis() - execStart;
 
             executionResults.add(Map.of(

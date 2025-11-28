@@ -1,5 +1,6 @@
 package com.mcp.robot.service.agent;
 
+import com.mcp.robot.service.AgentService;
 import dev.langchain4j.model.chat.ChatModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,13 +11,17 @@ import java.util.*;
 /**
  * Reflexion 模式
  * 执行 → 自我评估 → 改进 → 重新执行
+ * 
+ * 注意：使用 AgentService 而不是纯 ChatModel，
+ * 这样才能调用工具（查询数据库、天气、计算等）
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReflexionAgent {
 
-    private final ChatModel chatModel;
+    private final AgentService agentService;  // 有工具能力的 Agent
+    private final ChatModel chatModel;        // 用于评估
 
     public Map<String, Object> executeWithReflection(String task, int maxRetries) {
         log.info("🔍 [Reflexion] 开始执行: {}", task);
@@ -28,9 +33,9 @@ public class ReflexionAgent {
         for (int i = 0; i < maxRetries; i++) {
             log.info("第 {} 次尝试", i + 1);
 
-            // 执行任务
+            // 执行任务（使用有工具能力的 AgentService）
             long execStart = System.currentTimeMillis();
-            String result = chatModel.chat(currentTask);
+            String result = agentService.generalAssist(currentTask);
             long execDuration = System.currentTimeMillis() - execStart;
 
             // 自我评估

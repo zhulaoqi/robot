@@ -1,5 +1,6 @@
 package com.mcp.robot.service.agent;
 
+import com.mcp.robot.service.AgentService;
 import dev.langchain4j.model.chat.ChatModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,13 +11,16 @@ import java.util.*;
 /**
  * Chain of Thought 模式
  * 让 AI 逐步推理，展示思考过程
+ * 
+ * 注意：对于需要查询数据的问题，使用 AgentService 可以调用工具
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChainOfThoughtAgent {
 
-    private final ChatModel chatModel;
+    private final AgentService agentService;  // 有工具能力的 Agent
+    private final ChatModel chatModel;        // 用于纯推理
 
     public Map<String, Object> solve(String problem) {
         log.info("[Chain of Thought] 开始推理: {}", problem);
@@ -30,7 +34,7 @@ public class ChainOfThoughtAgent {
                 
                 要求：
                 1. 先理解问题
-                2. 列出已知条件
+                2. 列出已知条件（如果需要查询数据，请调用工具）
                 3. 逐步推理（Let's think step by step）
                 4. 给出最终答案
                 
@@ -48,9 +52,12 @@ public class ChainOfThoughtAgent {
                 
                 【最终答案】
                 ...
+                
+                注意：如果需要查询数据库、天气等信息，请主动调用工具。
                 """, problem);
 
-        String response = chatModel.chat(prompt);
+        // 使用 AgentService 以便可以调用工具
+        String response = agentService.generalAssist(prompt);
         long duration = System.currentTimeMillis() - start;
 
         // 解析响应
