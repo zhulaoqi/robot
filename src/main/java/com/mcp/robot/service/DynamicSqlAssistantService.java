@@ -23,7 +23,7 @@ public interface DynamicSqlAssistantService {
 
     /**
      * 动态 SQL 对话（支持热更新 Prompt）
-     *
+     * <p>
      * 通过 {{systemPrompt}} 模板变量注入动态 Prompt
      */
     @SystemMessage("{{systemPrompt}}")

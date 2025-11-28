@@ -15,14 +15,14 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class PlanAndExecuteAgent {
-    
+
     private final ChatModel chatModel;
-    
+
     public Map<String, Object> execute(String userRequest) {
         log.info("[Plan-and-Execute] 开始执行: {}", userRequest);
-        
+
         List<Map<String, Object>> steps = new ArrayList<>();
-        
+
         // 步骤 1: 制定计划
         long planStart = System.currentTimeMillis();
         String planPrompt = String.format("""
@@ -40,82 +40,82 @@ public class PlanAndExecuteAgent {
                 2. 步骤描述
                 3. 步骤描述
                 """, userRequest);
-        
+
         String plan = chatModel.chat(planPrompt);
         long planDuration = System.currentTimeMillis() - planStart;
-        
+
         List<String> taskSteps = Arrays.stream(plan.split("\n"))
-            .filter(line -> line.matches("^\\d+\\..*"))
-            .map(line -> line.replaceFirst("^\\d+\\.\\s*", ""))
-            .toList();
-        
+                .filter(line -> line.matches("^\\d+\\..*"))
+                .map(line -> line.replaceFirst("^\\d+\\.\\s*", ""))
+                .toList();
+
         log.info("计划制定完成，共 {} 个步骤", taskSteps.size());
-        
+
         steps.add(Map.of(
-            "phase", "planning",
-            "name", "任务规划",
-            "plan", taskSteps,
-            "duration_ms", planDuration
+                "phase", "planning",
+                "name", "任务规划",
+                "plan", taskSteps,
+                "duration_ms", planDuration
         ));
-        
+
         // 步骤 2: 逐个执行
         List<Map<String, Object>> executionResults = new ArrayList<>();
         for (int i = 0; i < taskSteps.size(); i++) {
             String step = taskSteps.get(i);
             log.info("🔧 执行步骤 {}/{}: {}", i + 1, taskSteps.size(), step);
-            
+
             long execStart = System.currentTimeMillis();
             String result = chatModel.chat("执行以下任务并给出结果：" + step);
             long execDuration = System.currentTimeMillis() - execStart;
-            
+
             executionResults.add(Map.of(
-                "step_number", i + 1,
-                "step_description", step,
-                "result", result,
-                "duration_ms", execDuration
+                    "step_number", i + 1,
+                    "step_description", step,
+                    "result", result,
+                    "duration_ms", execDuration
             ));
         }
-        
+
         steps.add(Map.of(
-            "phase", "execution",
-            "name", "任务执行",
-            "results", executionResults
+                "phase", "execution",
+                "name", "任务执行",
+                "results", executionResults
         ));
-        
+
         // 步骤 3: 汇总结果
         long summaryStart = System.currentTimeMillis();
         String summaryPrompt = String.format("""
-                汇总以下任务执行结果，给出完整的答案：
-                
-                原始任务：%s
-                
-                执行结果：
-                %s
-                
-                请给出简洁、完整的总结。
-                """, userRequest, 
+                        汇总以下任务执行结果，给出完整的答案：
+                        
+                        原始任务：%s
+                        
+                        执行结果：
+                        %s
+                        
+                        请给出简洁、完整的总结。
+                        """, userRequest,
                 executionResults.stream()
-                    .map(r -> String.format("步骤%d: %s", r.get("step_number"), r.get("result")))
-                    .reduce((a, b) -> a + "\n" + b)
-                    .orElse(""));
-        
+                        .map(r -> String.format("步骤%d: %s", r.get("step_number"), r.get("result")))
+                        .reduce((a, b) -> a + "\n" + b)
+                        .orElse(""));
+
         String summary = chatModel.chat(summaryPrompt);
         long summaryDuration = System.currentTimeMillis() - summaryStart;
-        
+
         log.info("任务完成");
-        
+
         steps.add(Map.of(
-            "phase", "summary",
-            "name", "结果汇总",
-            "summary", summary,
-            "duration_ms", summaryDuration
+                "phase", "summary",
+                "name", "结果汇总",
+                "summary", summary,
+                "duration_ms", summaryDuration
         ));
-        
+
         return Map.of(
-            "mode", "Plan-and-Execute",
-            "user_request", userRequest,
-            "steps", steps,
-            "final_answer", summary
+                "mode", "Plan-and-Execute",
+                "user_request", userRequest,
+                "steps", steps,
+                "final_answer", summary
         );
     }
 }

@@ -127,22 +127,34 @@ curl -X POST "http://localhost:8080/ai/agent-demo/interactive/abc12345/resume"
     {
       "phase": "intent_understanding",
       "name": "意图理解",
-      "result": {...},
+      "result": {
+        ...
+      },
       "duration_ms": 1200
     },
     {
       "phase": "task_planning",
       "name": "任务规划",
       "tasks": [
-        {"task_id": "1", "action": "查询", "description": "..."},
-        {"task_id": "2", "action": "分析", "description": "..."}
+        {
+          "task_id": "1",
+          "action": "查询",
+          "description": "..."
+        },
+        {
+          "task_id": "2",
+          "action": "分析",
+          "description": "..."
+        }
       ],
       "duration_ms": 800
     },
     {
       "phase": "task_execution",
       "name": "任务执行",
-      "results": [...]
+      "results": [
+        ...
+      ]
     },
     {
       "phase": "result_summary",
@@ -164,8 +176,16 @@ curl -X POST "http://localhost:8080/ai/agent-demo/interactive/abc12345/resume"
   "total_phases": 4,
   "progress_percent": 50,
   "phases": [
-    {"phase": 1, "name": "意图理解", "status": "completed"},
-    {"phase": 2, "name": "任务规划", "status": "completed"}
+    {
+      "phase": 1,
+      "name": "意图理解",
+      "status": "completed"
+    },
+    {
+      "phase": 2,
+      "name": "任务规划",
+      "status": "completed"
+    }
   ]
 }
 ```
@@ -206,6 +226,7 @@ curl "http://localhost:8080/ai/agent-demo/smart-route/demo"
 ### 何时使用智能路由？
 
 ✅ **推荐场景**：
+
 - 不确定用哪种模式
 - 快速原型开发
 - 通用聊天场景
@@ -213,24 +234,29 @@ curl "http://localhost:8080/ai/agent-demo/smart-route/demo"
 ### 何时使用特定模式？
 
 ✅ **Plan-and-Execute**：
+
 - 复杂的多步骤任务
 - 需要明确的执行计划
 
 ✅ **Reflexion**：
+
 - 代码生成
 - SQL 生成
 - 需要高质量输出
 
 ✅ **Chain of Thought**：
+
 - 数学计算
 - 逻辑推理
 - 需要展示思考过程
 
 ✅ **任务编排**：
+
 - 需要完整的任务生命周期管理
 - 需要追踪每个阶段的执行情况
 
 ✅ **交互式任务**：
+
 - 长时间运行的任务
 - 需要中途暂停/恢复
 - 需要实时查看进度
@@ -247,6 +273,7 @@ curl "http://localhost:8080/ai/agent-demo/smart-route/demo"
 - ✅ 状态追踪
 
 **查看日志**：
+
 ```bash
 # 启动应用时会看到详细的执行日志
 🎯 [Router] 收到用户输入: ...

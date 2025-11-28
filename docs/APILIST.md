@@ -23,17 +23,18 @@ curl "http://localhost:8080/ai/chat/demo-stream/stream/memory?userMessage=用轻
 ### 1.5 结构化输出 - 提取人员信息
 
 curl -G "http://localhost:8080/ai/chat/extract/person" \
-  --data-urlencode "userMessage=我叫李明，今年28岁，男性，在腾讯担任高级Java工程师，手机号是13800138000，邮箱是liming@example.com，住在深圳市南山区"
+--data-urlencode "
+userMessage=我叫李明，今年28岁，男性，在腾讯担任高级Java工程师，手机号是13800138000，邮箱是liming@example.com，住在深圳市南山区"
 
 ### 1.6 Prompt 模板变量 - Mock 数据生成
 
 curl -G "http://localhost:8080/ai/chat/mock/username" \
-  --data-urlencode "total=5"
+--data-urlencode "total=5"
 
 ### 1.7 再试试生成更多
 
 curl -G "http://localhost:8080/ai/chat/mock/username" \
-  --data-urlencode "total=10"
+--data-urlencode "total=10"
 
 ## 2️⃣ 知识库 RAG
 
@@ -217,43 +218,43 @@ curl -G "http://localhost:8080/ai/chat/agent/general" \
 ### 9.1 智能路由（推荐 - 统一入口）
 
 curl -X POST "http://localhost:8080/ai/agent-demo/smart-route" \
-  --data-urlencode "input=计算 (5 + 3) * 2 - 4 的结果"
+--data-urlencode "input=计算 (5 + 3) * 2 - 4 的结果"
 
 > **说明**：AI 自动判断使用哪种模式（ReAct/Chain-of-Thought/Reflexion/Plan-and-Execute）
 
 ### 9.2 Plan-and-Execute 模式
 
 curl -G "http://localhost:8080/ai/agent-demo/mode/plan-execute" \
-  --data-urlencode "task=如何提高学生的学习成绩？给出详细方案"
+--data-urlencode "task=如何提高学生的学习成绩？给出详细方案"
 
 > **适用场景**：复杂的多步骤任务
 
 ### 9.3 Reflexion 模式（自我改进）
 
 curl -G "http://localhost:8080/ai/agent-demo/mode/reflexion" \
-  --data-urlencode "task=生成一个查询学生成绩的 SQL" \
-  --data-urlencode "maxRetries=3"
+--data-urlencode "task=生成一个查询学生成绩的 SQL" \
+--data-urlencode "maxRetries=3"
 
 > **适用场景**：需要高质量输出（代码生成、SQL 生成）
 
 ### 9.4 Chain of Thought 模式（逻辑推理）
 
 curl -G "http://localhost:8080/ai/agent-demo/mode/chain-of-thought" \
-  --data-urlencode "problem=如果一个班有 30 个学生，平均分是 85，其中 10 个学生平均 90 分，其余学生平均多少分？"
+--data-urlencode "problem=如果一个班有 30 个学生，平均分是 85，其中 10 个学生平均 90 分，其余学生平均多少分？"
 
 > **适用场景**：数学计算、逻辑推理
 
 ### 9.5 任务编排（完整流程）
 
 curl -X POST "http://localhost:8080/ai/agent-demo/orchestration" \
-  --data-urlencode "request=分析学生成绩数据，找出平均分最高的专业，并给出提升其他专业成绩的建议"
+--data-urlencode "request=分析学生成绩数据，找出平均分最高的专业，并给出提升其他专业成绩的建议"
 
 > **说明**：展示完整的任务生命周期（意图理解 → 任务规划 → 逐步执行 → 结果汇总）
 
 ### 9.6 交互式任务 - 启动
 
 curl -X POST "http://localhost:8080/ai/agent-demo/interactive/start" \
-  --data-urlencode "request=分析学生成绩并生成详细报告"
+--data-urlencode "request=分析学生成绩并生成详细报告"
 
 > **返回**：`{"task_id": "abc12345"}`
 

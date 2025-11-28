@@ -27,6 +27,7 @@ mvn clean package -DskipTests
 ```
 
 编译成功后会生成：
+
 ```
 target/robot-0.0.1-SNAPSHOT.jar
 ```
@@ -72,10 +73,10 @@ docker exec robot-mysql mysqladmin ping -h localhost
 
 ## 构建速度对比
 
-| 方式 | 首次构建 | 重新构建 | 说明 |
-|------|---------|---------|------|
-| 标准方式（Dockerfile） | 5-10 分钟 | 3-5 分钟 | 在 Docker 中下载依赖 |
-| 快速方式（Dockerfile.fast） | 30 秒 | 20 秒 | 使用本地编译的 JAR |
+| 方式                    | 首次构建    | 重新构建   | 说明             |
+|-----------------------|---------|--------|----------------|
+| 标准方式（Dockerfile）      | 5-10 分钟 | 3-5 分钟 | 在 Docker 中下载依赖 |
+| 快速方式（Dockerfile.fast） | 30 秒    | 20 秒   | 使用本地编译的 JAR    |
 
 ## 常见问题
 
@@ -190,20 +191,21 @@ chmod +x quick-build.sh
 ### 为什么快？
 
 1. **跳过依赖下载**
-   - 标准方式：每次构建都要下载依赖到 Docker 容器
-   - 快速方式：使用本地已有的 Maven 缓存
+    - 标准方式：每次构建都要下载依赖到 Docker 容器
+    - 快速方式：使用本地已有的 Maven 缓存
 
 2. **简化构建步骤**
-   - 标准方式：Maven 镜像 → 下载依赖 → 编译 → 复制 JAR → JRE 镜像
-   - 快速方式：直接用本地 JAR → JRE 镜像
+    - 标准方式：Maven 镜像 → 下载依赖 → 编译 → 复制 JAR → JRE 镜像
+    - 快速方式：直接用本地 JAR → JRE 镜像
 
 3. **Docker 缓存优化**
-   - 只有 JAR 文件变化时才重新构建
-   - 基础镜像层会被缓存
+    - 只有 JAR 文件变化时才重新构建
+    - 基础镜像层会被缓存
 
 ### Dockerfile 对比
 
 #### Dockerfile.fast（快速版）
+
 ```dockerfile
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
@@ -213,6 +215,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
 #### Dockerfile（标准版）
+
 ```dockerfile
 # 第一阶段：构建
 FROM maven:3.9-eclipse-temurin-21-alpine AS builder
@@ -232,14 +235,14 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 ### 适用场景
 
-| 场景 | 推荐方式 |
-|------|---------|
-| 本地开发调试 | Dockerfile.fast |
-| CI/CD 自动部署 | Dockerfile |
-| 首次部署到新环境 | Dockerfile |
-| 频繁修改代码测试 | Dockerfile.fast |
-| GitHub Actions | Dockerfile |
-| 团队协作开发 | Dockerfile.fast |
+| 场景             | 推荐方式            |
+|----------------|-----------------|
+| 本地开发调试         | Dockerfile.fast |
+| CI/CD 自动部署     | Dockerfile      |
+| 首次部署到新环境       | Dockerfile      |
+| 频繁修改代码测试       | Dockerfile.fast |
+| GitHub Actions | Dockerfile      |
+| 团队协作开发         | Dockerfile.fast |
 
 ## 联系方式
 
