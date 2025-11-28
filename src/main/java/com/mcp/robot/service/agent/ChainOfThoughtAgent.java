@@ -57,7 +57,7 @@ public class ChainOfThoughtAgent {
                 """, problem);
 
         // 使用 AgentService 以便可以调用工具
-        String response = agentService.generalAssist(prompt);
+        String response = agentService.generalAssist("cot-session", prompt);
         long duration = System.currentTimeMillis() - start;
 
         // 解析响应

@@ -35,7 +35,7 @@ public class ReflexionAgent {
 
             // 执行任务（使用有工具能力的 AgentService）
             long execStart = System.currentTimeMillis();
-            String result = agentService.generalAssist(currentTask);
+            String result = agentService.generalAssist("reflexion-session", currentTask);
             long execDuration = System.currentTimeMillis() - execStart;
 
             // 自我评估

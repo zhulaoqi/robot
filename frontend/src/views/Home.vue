@@ -3,6 +3,18 @@
     <div class="hero">
       <h1 class="hero-title">🤖 Robot AI Assistant</h1>
       <p class="hero-subtitle">基于 Langchain4j 的企业级 AI 对话系统</p>
+      
+      <!-- 生产级入口 -->
+      <div class="production-entry">
+        <router-link to="/production" class="production-btn">
+          <div class="production-icon">🚀</div>
+          <div class="production-content">
+            <h3>生产级对话系统</h3>
+            <p>动态配置 · 统一入口 · 能力组合</p>
+          </div>
+          <div class="production-arrow">→</div>
+        </router-link>
+      </div>
     </div>
 
     <div class="features grid grid-3">
@@ -254,6 +266,64 @@ onMounted(() => {
 .btn-sm {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
+}
+
+.production-entry {
+  margin-top: 2rem;
+}
+
+.production-btn {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  text-decoration: none;
+  color: white;
+  transition: all 0.3s;
+  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.3);
+}
+
+.production-btn:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+}
+
+.production-icon {
+  font-size: 3rem;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.production-content h3 {
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+}
+
+.production-content p {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 0.875rem;
+}
+
+.production-arrow {
+  font-size: 2rem;
+  margin-left: auto;
+  transition: transform 0.3s;
+}
+
+.production-btn:hover .production-arrow {
+  transform: translateX(10px);
 }
 </style>
 

@@ -25,7 +25,7 @@ public class ToolCallExecutor implements TaskExecutor {
         log.info("🔧 [ToolCallExecutor] 执行工具调用: {}", taskDescription);
         
         try {
-            String result = agentService.generalAssist(taskDescription);
+            String result = agentService.generalAssist("tool-call-session", taskDescription);
             log.info("✅ [ToolCallExecutor] 工具调用完成");
             return result;
         } catch (Exception e) {

@@ -69,7 +69,7 @@ public class PlanAndExecuteAgent {
             log.info("🔧 执行步骤 {}/{}: {}", i + 1, taskSteps.size(), step);
 
             long execStart = System.currentTimeMillis();
-            String result = agentService.generalAssist(step);
+            String result = agentService.generalAssist("plan-execute-session", step);
             long execDuration = System.currentTimeMillis() - execStart;
 
             executionResults.add(Map.of(

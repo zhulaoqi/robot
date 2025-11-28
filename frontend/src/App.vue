@@ -7,6 +7,8 @@
       </div>
       <div class="nav-menu">
         <router-link to="/" class="nav-item">🏠 首页</router-link>
+        <router-link to="/production" class="nav-item production-nav">🚀 生产级</router-link>
+        <div class="nav-divider"></div>
         <router-link to="/unified" class="nav-item">🎯 统一对话</router-link>
         <router-link to="/chat" class="nav-item">💬 对话</router-link>
         <router-link to="/sql" class="nav-item">🗄️ SQL</router-link>
@@ -81,6 +83,23 @@
 .nav-item.router-link-active {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+}
+
+.nav-divider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 0.5rem;
+}
+
+.production-nav {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(240, 147, 251, 0.3);
+}
+
+.production-nav:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
 }
 
 .main-content {

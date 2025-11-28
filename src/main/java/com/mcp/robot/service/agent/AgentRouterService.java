@@ -20,7 +20,7 @@ public class AgentRouterService {
 
     private final ChatModel chatModel;
     private final AgentService agentService;
-    private final UnifiedAgentService unifiedAgentService;  // ✅ 添加统一服务（带知识库）
+    private final UnifiedAgentService unifiedAgentService;
     private final PlanAndExecuteAgent planAndExecuteAgent;
     private final ReflexionAgent reflexionAgent;
     private final ChainOfThoughtAgent chainOfThoughtAgent;
@@ -139,7 +139,7 @@ public class AgentRouterService {
                 Map<String, Object> result = new HashMap<>();
                 result.put("mode", "ReAct");
                 // ✅ 使用 UnifiedAgentService（带知识库能力）
-                result.put("result", unifiedAgentService.chat(input));
+                result.put("result", unifiedAgentService.chat("default", input)); // 使用默认 memoryId
                 yield result;
             }
 

@@ -1,5 +1,6 @@
 package com.mcp.robot.service;
 
+import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.spring.AiService;
@@ -78,6 +79,6 @@ public interface UnifiedAgentService {
             - 给出准确、详细的回答
             - 如果不确定，说明原因
             """)
-    String chat(@UserMessage String message);
+    String chat(@MemoryId String memoryId, @UserMessage String message);
 }
 

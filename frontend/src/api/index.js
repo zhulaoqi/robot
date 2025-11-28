@@ -73,5 +73,18 @@ export const listPrompts = () => api.get('/chat/prompts/list')
 export const getPrompt = (key) => api.get(`/chat/prompts/${key}`)
 export const updatePrompt = (key, content, version) => api.put(`/chat/prompts/${key}`, null, { params: { content, version } })
 
+// ========== 智能对话接口（生产级 - 完全自动化） ==========
+const smartApi = axios.create({
+  baseURL: '/api/smart',
+  timeout: 60000
+})
+
+export const smartChat = (message, userId = 'default') =>
+  smartApi.get('/chat', { params: { message, userId } })
+
+export const smartHealth = () => smartApi.get('/health')
+
+export const smartDemo = () => smartApi.get('/demo')
+
 export default api
 
