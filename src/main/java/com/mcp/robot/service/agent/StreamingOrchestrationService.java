@@ -138,7 +138,7 @@ public class StreamingOrchestrationService {
             sleep(800);
 
             // 执行任务（这里简化，实际应该调用真实服务）
-            String result = agentService.generalAssist("执行：" + task);
+            String result = agentService.generalAssist("streaming-session", "执行：" + task);
 
             results.add(Map.of(
                     "task_id", i + 1,

@@ -58,7 +58,7 @@ public class AiServiceController {
      */
     @GetMapping("/test")
     public String test() {
-        return aiSqlAssistantService.test("你是谁");
+        return chatModel.chat("你是谁");
     }
 
     /**
@@ -347,7 +347,7 @@ public class AiServiceController {
     @GetMapping("/agent/general")
     public String generalAssist(@RequestParam String request) {
         log.info(" [综合助手Agent] 请求: {}", request);
-        return agentService.generalAssist(request);
+        return agentService.generalAssist("demo",request);
     }
 
 // ====================  知识库管理（用于测试）====================
@@ -377,31 +377,87 @@ public class AiServiceController {
      * 列出所有 Prompt 模板
      */
     @GetMapping("/prompts/list")
-    public Map<String, PromptManager.PromptTemplate> listPrompts() {
-        log.info(" 查询所有 Prompt 模板");
-        return promptManager.listAllPrompts();
+    public Map<String, Object> listPrompts() {
+        log.info("📋 查询所有 Prompt 模板");
+        Map<String, PromptManager.PromptTemplate> allPrompts = promptManager.listAllPrompts();
+        
+        // 按分类组织
+        Map<String, Map<String, PromptManager.PromptTemplate>> byCategory = new java.util.LinkedHashMap<>();
+        allPrompts.forEach((key, template) -> {
+            byCategory.computeIfAbsent(template.getCategory(), k -> new java.util.LinkedHashMap<>())
+                    .put(key, template);
+        });
+        
+        return Map.of(
+                "total", allPrompts.size(),
+                "categories", promptManager.getAllCategories(),
+                "prompts", allPrompts,
+                "by_category", byCategory
+        );
+    }
+    
+    /**
+     * 根据分类获取 Prompt 模板
+     */
+    @GetMapping("/prompts/category/{category}")
+    public Map<String, PromptManager.PromptTemplate> getPromptsByCategory(@PathVariable String category) {
+        log.info("📂 查询分类 [{}] 的 Prompt 模板", category);
+        return promptManager.getPromptsByCategory(category);
+    }
+    
+    /**
+     * 获取所有分类
+     */
+    @GetMapping("/prompts/categories")
+    public java.util.Set<String> getAllCategories() {
+        log.info("🏷️ 查询所有 Prompt 分类");
+        return promptManager.getAllCategories();
     }
 
     /**
      * 获取指定 Prompt 模板
      */
     @GetMapping("/prompts/{key}")
-    public String getPrompt(@PathVariable String key) {
-        log.info(" 获取 Prompt 模板: {}", key);
-        return promptManager.getPrompt(key);
+    public Map<String, Object> getPrompt(@PathVariable String key) {
+        log.info("🔍 获取 Prompt 模板: {}", key);
+        PromptManager.PromptTemplate template = promptManager.listAllPrompts().get(key);
+        if (template == null) {
+            return Map.of("error", "Prompt 模板不存在: " + key);
+        }
+        return Map.of(
+                "key", key,
+                "template", template,
+                "content", promptManager.getPrompt(key)
+        );
     }
 
     /**
      * 更新 Prompt 模板（热更新）
      */
     @PutMapping("/prompts/{key}")
-    public String updatePrompt(
+    public Map<String, Object> updatePrompt(
             @PathVariable String key,
             @RequestParam String content,
             @RequestParam(defaultValue = "2.0") String version) {
-        log.info(" 更新 Prompt 模板: {} → 版本 {}", key, version);
+        log.info("🔄 更新 Prompt 模板: {} → 版本 {}", key, version);
+        
+        PromptManager.PromptTemplate oldTemplate = promptManager.listAllPrompts().get(key);
+        if (oldTemplate == null) {
+            return Map.of(
+                    "success", false,
+                    "message", "Prompt 模板不存在: " + key
+            );
+        }
+        
         promptManager.updatePrompt(key, content, version);
-        return "Prompt 模板已更新";
+        
+        return Map.of(
+                "success", true,
+                "message", "Prompt 模板已更新",
+                "key", key,
+                "old_version", oldTemplate.getVersion(),
+                "new_version", version
+        );
     }
 
 // ==================== 🔌 MCP 管理功能 ====================

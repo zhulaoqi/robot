@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
 import Home from './views/Home.vue'
+import Production from './views/Production.vue'
 import UnifiedChat from './views/UnifiedChat.vue'
 import Chat from './views/Chat.vue'
 import Sql from './views/Sql.vue'
@@ -11,6 +12,7 @@ import Mcp from './views/Mcp.vue'
 
 const routes = [
   { path: '/', component: Home },
+  { path: '/production', component: Production },
   { path: '/unified', component: UnifiedChat },
   { path: '/chat', component: Chat },
   { path: '/sql', component: Sql },

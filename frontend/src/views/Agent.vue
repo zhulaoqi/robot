@@ -43,7 +43,7 @@
         ></textarea>
       </div>
 
-      <button @click="orchestrate" class="btn btn-primary" :disabled="orchestrating">
+      <button @click="doOrchestrate" class="btn btn-primary" :disabled="orchestrating">
         {{ orchestrating ? '编排中...' : '开始编排' }}
       </button>
 
@@ -199,7 +199,7 @@ const executeTask = async () => {
     }
     result.value = JSON.stringify(res.data, null, 2)
   } catch (error) {
-    result.value = '错误: ' + error.message
+    result.value = '错误: ' + (error.response?.data || error.message)
   } finally {
     executing.value = false
   }

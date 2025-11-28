@@ -3,6 +3,18 @@
     <div class="hero">
       <h1 class="hero-title">🤖 Robot AI Assistant</h1>
       <p class="hero-subtitle">基于 Langchain4j 的企业级 AI 对话系统</p>
+      
+      <!-- 生产级入口 -->
+      <div class="production-entry">
+        <router-link to="/production" class="production-btn">
+          <div class="production-icon">🚀</div>
+          <div class="production-content">
+            <h3>生产级对话系统</h3>
+            <p>动态配置 · 统一入口 · 能力组合</p>
+          </div>
+          <div class="production-arrow">→</div>
+        </router-link>
+      </div>
     </div>
 
     <div class="features grid grid-3">
@@ -50,7 +62,10 @@
     </div>
 
     <div class="stats card">
-      <h2 class="card-title">系统状态</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 class="card-title" style="margin: 0;">系统状态</h2>
+        <button @click="loadStats" class="btn btn-secondary btn-sm">🔄 刷新</button>
+      </div>
       <div class="stats-grid grid grid-3">
         <div class="stat-item">
           <div class="stat-value">{{ stats.knowledge }}</div>
@@ -91,17 +106,46 @@ const testing = ref(false)
 const testResult = ref('')
 
 const loadStats = async () => {
+  // 知识库统计
   try {
-    const [knowledgeRes, tasksRes, toolsRes] = await Promise.all([
-      getKnowledgeStats(),
-      listTasks(),
-      listMcpTools()
-    ])
-    stats.value.knowledge = knowledgeRes.data.total || 0
-    stats.value.tasks = tasksRes.data.length || 0
-    stats.value.tools = (toolsRes.data.java_tools?.length || 0) + (toolsRes.data.mcp_tools?.length || 0)
+    const knowledgeRes = await getKnowledgeStats()
+    stats.value.knowledge = knowledgeRes.data.total_vectors || 0
+    console.log('知识库条目:', stats.value.knowledge)
   } catch (error) {
-    console.error('加载统计信息失败:', error)
+    console.error('加载知识库统计失败:', error)
+    stats.value.knowledge = 0
+  }
+  
+  // 任务统计
+  try {
+    const tasksRes = await listTasks()
+    stats.value.tasks = tasksRes.data.total || 0
+    console.log('运行中任务:', stats.value.tasks)
+  } catch (error) {
+    console.error('加载任务统计失败:', error)
+    stats.value.tasks = 0
+  }
+  
+  // 工具统计
+  try {
+    const toolsRes = await listMcpTools()
+    console.log('工具列表响应:', toolsRes.data)
+    
+    let toolCount = 0
+    if (toolsRes.data) {
+      // 遍历所有服务器的工具
+      for (const [serverName, tools] of Object.entries(toolsRes.data)) {
+        if (Array.isArray(tools)) {
+          toolCount += tools.length
+          console.log(`${serverName}: ${tools.length} 个工具`)
+        }
+      }
+    }
+    stats.value.tools = toolCount
+    console.log('可用工具总数:', toolCount)
+  } catch (error) {
+    console.error('加载工具列表失败:', error)
+    stats.value.tools = 0
   }
 }
 
@@ -217,6 +261,69 @@ onMounted(() => {
 
 .quick-test .btn {
   margin-top: 1rem;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.production-entry {
+  margin-top: 2rem;
+}
+
+.production-btn {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  text-decoration: none;
+  color: white;
+  transition: all 0.3s;
+  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.3);
+}
+
+.production-btn:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+}
+
+.production-icon {
+  font-size: 3rem;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.production-content h3 {
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+}
+
+.production-content p {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 0.875rem;
+}
+
+.production-arrow {
+  font-size: 2rem;
+  margin-left: auto;
+  transition: transform 0.3s;
+}
+
+.production-btn:hover .production-arrow {
+  transform: translateX(10px);
 }
 </style>
 

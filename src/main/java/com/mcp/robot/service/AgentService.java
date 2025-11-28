@@ -1,5 +1,6 @@
 package com.mcp.robot.service;
 
+import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.spring.AiService;
@@ -14,6 +15,7 @@ import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
 @AiService(
         wiringMode = EXPLICIT,
         chatModel = "openAiChatModel",
+        chatMemoryProvider = "chatMemoryProvider",  // ✅ 添加记忆能力
         tools = {"sysTools"}  // 可以调用所有工具
 )
 public interface AgentService {
@@ -75,5 +77,5 @@ public interface AgentService {
             请根据用户需求，自动判断需要使用哪些工具，并按顺序完成任务。
             如果任务复杂，可以分多步执行。
             """)
-    String generalAssist(@UserMessage String request);
+    String generalAssist(@MemoryId String memoryId, @UserMessage String request);
 }

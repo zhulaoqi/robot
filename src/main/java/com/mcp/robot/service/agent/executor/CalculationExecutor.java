@@ -26,7 +26,7 @@ public class CalculationExecutor implements TaskExecutor {
         
         try {
             // AgentService 会自动调用 calculate 工具
-            String result = agentService.generalAssist("计算：" + taskDescription);
+            String result = agentService.generalAssist("calculation-session", "计算：" + taskDescription);
             log.info("✅ [CalculationExecutor] 计算完成");
             return result;
         } catch (Exception e) {
