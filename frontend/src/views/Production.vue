@@ -1,23 +1,23 @@
 <template>
   <div class="production-page">
-    <!-- 顶部标题区 -->
+    <!-- 极简顶部栏 -->
     <div class="page-header">
-      <div class="header-content">
-        <h1 class="page-title">
-          <span class="icon">🚀</span>
-          智能对话系统
-        </h1>
-        <p class="page-subtitle">完全自动化 · 智能路由 · 黑盒执行 · 生产就绪</p>
+      <div class="header-stats">
+        <span class="stat-item">💬 {{ stats.totalMessages }} 条对话</span>
+        <span class="stat-item">⚡ {{ stats.avgResponseTime }}ms 平均响应</span>
       </div>
-      <div class="status-badge" :class="{ online: isOnline }">
-        <span class="status-dot"></span>
-        {{ isOnline ? '在线' : '离线' }}
+      <div class="header-right">
+        <span class="app-name">AI 助手</span>
+        <div class="status-badge" :class="{ online: isOnline }">
+          <span class="status-dot"></span>
+          {{ isOnline ? '在线' : '离线' }}
+        </div>
       </div>
     </div>
 
-    <!-- 主要内容区 -->
+    <!-- 主要内容区 - 只有对话 -->
     <div class="main-content">
-      <!-- 对话区 -->
+      <!-- 对话区（全屏） -->
       <div class="chat-container">
         <!-- 消息列表 -->
         <div class="messages-area" ref="messagesArea">
@@ -47,28 +47,41 @@
                 <span class="message-time">{{ msg.time }}</span>
               </div>
               <div class="message-content">{{ msg.content }}</div>
-              
-              <!-- 意图标签 -->
-              <div v-if="msg.intent" class="message-intent">
-                <span class="intent-badge" :class="msg.intent.type.toLowerCase()">
-                  {{ intentLabels[msg.intent.type] || msg.intent.type }}
-                </span>
-                <span class="intent-confidence">{{ (msg.intent.confidence * 100).toFixed(0) }}%</span>
+
+          <!-- 思考过程（保存在历史消息中） -->
+          <div v-if="msg.thinking_steps && msg.thinking_steps.length > 0" class="message-thinking-history">
+            <div class="thinking-toggle" @click="msg.showThinking = !msg.showThinking">
+              {{ msg.showThinking ? '▼' : '▶' }} 思考过程
+            </div>
+            <div v-if="msg.showThinking" class="thinking-detail-list">
+              <div v-for="(step, idx) in msg.thinking_steps" :key="idx" class="thinking-line">
+                {{ step.message }}
+                <span v-if="step.result" class="thinking-result">{{ step.result }}</span>
               </div>
-              
-              <!-- 能力使用情况 -->
-              <div v-if="msg.capabilities" class="message-capabilities">
-                <span v-if="msg.capabilities.knowledge" class="capability-tag">📚 知识库</span>
-                <span v-if="msg.capabilities.tools" class="capability-tag">🔧 工具</span>
-                <span v-if="msg.capabilities.memory" class="capability-tag">💾 记忆</span>
-              </div>
-              
-              <!-- 性能指标 -->
-              <div v-if="msg.performance" class="message-performance">
-                <span class="perf-item">识别: {{ msg.performance.intent_recognition_ms }}ms</span>
-                <span class="perf-item">执行: {{ msg.performance.execution_ms }}ms</span>
-                <span class="perf-item">总计: {{ msg.performance.total_ms }}ms</span>
-              </div>
+            </div>
+          </div>
+
+          <!-- 意图标签 -->
+          <div v-if="msg.intent" class="message-intent">
+            <span class="intent-badge" :class="msg.intent.type.toLowerCase()">
+              {{ intentLabels[msg.intent.type] || msg.intent.type }}
+            </span>
+            <span class="intent-confidence">{{ (msg.intent.confidence * 100).toFixed(0) }}%</span>
+          </div>
+
+          <!-- 能力使用情况 -->
+          <div v-if="msg.capabilities" class="message-capabilities">
+            <span v-if="msg.capabilities.knowledge" class="capability-tag">📚 知识库</span>
+            <span v-if="msg.capabilities.tools" class="capability-tag">🔧 工具</span>
+            <span v-if="msg.capabilities.memory" class="capability-tag">💾 记忆</span>
+          </div>
+
+          <!-- 性能指标 -->
+          <div v-if="msg.performance" class="message-performance">
+            <span class="perf-item">识别: {{ msg.performance.intent_recognition_ms }}ms</span>
+            <span class="perf-item">执行: {{ msg.performance.execution_ms }}ms</span>
+            <span class="perf-item">总计: {{ msg.performance.total_ms }}ms</span>
+          </div>
             </div>
           </div>
 
@@ -86,93 +99,71 @@
               </div>
             </div>
           </div>
+
+          <!-- 流式进度显示 - 极简文本样式 -->
+          <div v-if="isStreaming" class="message-wrapper assistant">
+            <div class="message-bubble streaming-progress">
+              <div class="message-header">
+                <span class="message-avatar">🤖</span>
+                <span class="message-role">AI 助手</span>
+              </div>
+              
+              <!-- 极简思考过程 - 纯文本流式显示 -->
+              <div v-if="streamingResponse.length > 0" class="thinking-process">
+                <div v-for="(step, index) in streamingResponse" :key="index" class="process-line">
+                  <span class="process-text">{{ step.message }}</span>
+                  <span v-if="step.result" class="process-result">{{ step.result }}</span>
+                </div>
+              </div>
+              
+              <!-- 流式回答 -->
+              <div v-if="streamingAnswer" class="streaming-answer">
+                <div class="answer-divider">─────</div>
+                <div class="answer-text">{{ streamingAnswer }}<span class="cursor-blink">▌</span></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 输入区 -->
         <div class="input-area">
+          <div class="mode-selector">
+            <button 
+              @click="chatMode = 'normal'" 
+              :class="['mode-btn', { active: chatMode === 'normal' }]"
+            >
+              📤 普通模式
+            </button>
+            <button 
+              @click="chatMode = 'stream'" 
+              :class="['mode-btn', { active: chatMode === 'stream' }]"
+            >
+              📡 流式模式
+            </button>
+          </div>
           <div class="input-container">
-            <textarea 
-              v-model="message" 
-              class="message-input" 
+            <textarea
+              v-model="message"
+              class="message-input"
               placeholder="输入任何问题，系统会自动处理..."
               @keydown.enter.prevent="handleEnter"
               rows="1"
               ref="inputRef"
             ></textarea>
-            <button @click="sendMessage" class="send-btn" :disabled="loading || !message.trim()">
-              <span v-if="loading">⏳</span>
-              <span v-else>✈️</span>
+            <button 
+              @click="chatMode === 'stream' ? sendStreamMessage() : sendMessage()" 
+              class="send-btn" 
+              :disabled="loading || isStreaming || !message.trim()"
+            >
+              <span v-if="loading || isStreaming">⏳</span>
+              <span v-else>{{ chatMode === 'stream' ? '📡' : '📤' }}</span>
             </button>
           </div>
           <div class="input-footer">
-            <span class="input-hint">Enter 发送 · Shift+Enter 换行</span>
+            <span class="input-hint">
+              {{ chatMode === 'stream' ? '📡 流式模式：实时查看处理过程' : '📤 普通模式：直接返回结果' }} · Enter 发送
+            </span>
             <span class="user-id">用户: {{ userId }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 右侧信息面板 -->
-      <div class="info-panel">
-        <!-- 系统状态 -->
-        <div class="info-card">
-          <h3 class="info-title">📊 系统状态</h3>
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div class="stat-value">{{ stats.totalMessages }}</div>
-              <div class="stat-label">消息数</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value">{{ stats.avgResponseTime }}ms</div>
-              <div class="stat-label">平均响应</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 能力说明 -->
-        <div class="info-card">
-          <h3 class="info-title">✨ 自动化能力</h3>
-          <div class="capability-list">
-            <div class="capability-item">
-              <span class="cap-icon">🔍</span>
-              <div class="cap-content">
-                <div class="cap-title">智能意图识别</div>
-                <div class="cap-desc">自动分析问题类型</div>
-              </div>
-            </div>
-            <div class="capability-item">
-              <span class="cap-icon">🎯</span>
-              <div class="cap-content">
-                <div class="cap-title">动态能力选择</div>
-                <div class="cap-desc">自动启用所需功能</div>
-              </div>
-            </div>
-            <div class="capability-item">
-              <span class="cap-icon">⚡</span>
-              <div class="cap-content">
-                <div class="cap-title">自动任务执行</div>
-                <div class="cap-desc">检索、生成、调用</div>
-              </div>
-            </div>
-            <div class="capability-item">
-              <span class="cap-icon">📈</span>
-              <div class="cap-content">
-                <div class="cap-title">性能监控</div>
-                <div class="cap-desc">实时性能指标</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 最近意图 -->
-        <div v-if="recentIntents.length > 0" class="info-card">
-          <h3 class="info-title">🎯 最近识别</h3>
-          <div class="intent-list">
-            <div v-for="(intent, index) in recentIntents" :key="index" class="intent-item">
-              <span class="intent-badge" :class="intent.type.toLowerCase()">
-                {{ intentLabels[intent.type] }}
-              </span>
-              <span class="intent-confidence">{{ (intent.confidence * 100).toFixed(0) }}%</span>
-            </div>
           </div>
         </div>
       </div>
@@ -205,16 +196,204 @@ const intentLabels = {
   PURE_CHAT: '纯对话'
 }
 
+const streamingResponse = ref([])
+const isStreaming = ref(false)
+const chatMode = ref('stream') // 默认使用流式模式
+const streamingAnswer = ref('') // 流式答案
+
+const sendStreamMessage = async () => {
+  if (!message.value.trim() || isStreaming.value) return
+
+  const userMsg = message.value
+  message.value = ''
+  isStreaming.value = true
+  streamingResponse.value = []
+  streamingAnswer.value = '' // 重置流式答案
+
+  // 添加用户消息
+  chatHistory.value.push({
+    role: 'user',
+    content: userMsg,
+    time: new Date().toLocaleTimeString()
+  })
+
+  // 创建 EventSource 连接
+  const url = `/api/smart/chat/stream?userId=${userId.value}&message=${encodeURIComponent(userMsg)}`
+  const eventSource = new EventSource(url)
+
+  let finalAnswer = ''
+  let intentInfo = null
+  let performanceInfo = null
+
+  eventSource.onmessage = (event) => {
+    try {
+      console.log('收到 SSE 数据:', event.data)
+      
+      // 处理 SSE 数据格式：去掉可能的 "data: " 前缀
+      let jsonStr = event.data
+      if (jsonStr.startsWith('data: ')) {
+        jsonStr = jsonStr.substring(6) // 去掉 "data: " 前缀
+      }
+      
+      const data = JSON.parse(jsonStr)
+      streamingResponse.value.push(data)
+
+      // 根据事件类型处理 - 构建结果文本
+      let stepWithResult = {
+        message: data.message,
+        event: data.event,
+        result: null
+      }
+      
+      switch (data.event) {
+        case 'intent_start':
+          console.log('🔍 开始识别意图')
+          break
+        case 'intent_result':
+          console.log('✅ 意图识别:', data.data.intent_type)
+          intentInfo = {
+            type: data.data.intent_type,
+            confidence: data.data.confidence
+          }
+          // 添加识别结果
+          stepWithResult.result = `${intentLabels[data.data.intent_type]} (置信度: ${(data.data.confidence * 100).toFixed(0)}%)`
+          break
+        case 'capability_prepare':
+          console.log('⚙️ 准备能力:', data.data)
+          // 显示启用的能力
+          const caps = []
+          if (data.data.knowledge) caps.push('知识库')
+          if (data.data.tools) caps.push('工具')
+          if (data.data.memory) caps.push('记忆')
+          if (caps.length > 0) {
+            stepWithResult.result = `[${caps.join(', ')}]`
+          }
+          break
+        case 'execution_start':
+          console.log('🚀 开始执行')
+          if (data.data.mode) {
+            stepWithResult.result = `模式: ${data.data.mode}`
+          }
+          break
+        case 'execution_step':
+          console.log('▶️ 执行步骤:', data.message)
+          // 如果有SQL或其他结果，显示出来
+          if (data.data.sql) {
+            stepWithResult.result = `\nSQL: ${data.data.sql}`
+          }
+          if (data.data.ddl) {
+            stepWithResult.result = `\n表结构: ${data.data.ddl}`
+          }
+          if (data.data.result) {
+            stepWithResult.result = `\n${data.data.result}`
+          }
+          break
+        case 'final_result':
+          finalAnswer = data.data.answer
+          performanceInfo = data.data.performance
+          console.log('✅ 最终结果:', finalAnswer)
+          
+          // 逐字显示效果
+          streamingAnswer.value = ''
+          let charIndex = 0
+          const typeInterval = setInterval(() => {
+            if (charIndex < finalAnswer.length) {
+              streamingAnswer.value += finalAnswer[charIndex]
+              charIndex++
+              scrollToBottom()
+            } else {
+              clearInterval(typeInterval)
+              
+              // 显示完成后添加到历史记录
+              chatHistory.value.push({
+                role: 'assistant',
+                content: finalAnswer,
+                time: new Date().toLocaleTimeString(),
+                streaming: true,
+                intent: intentInfo,
+                performance: performanceInfo,
+                thinking_steps: [...streamingResponse.value], // 保留完整的思考过程
+                showThinking: false // 默认折叠思考过程
+              })
+              
+              // 更新最近意图
+              if (intentInfo) {
+                recentIntents.value.unshift(intentInfo)
+                if (recentIntents.value.length > 5) {
+                  recentIntents.value.pop()
+                }
+              }
+              
+              // 关闭 EventSource
+              eventSource.close()
+              isStreaming.value = false
+              
+              // 延迟清空，确保已经添加到 chatHistory
+              setTimeout(() => {
+                streamingResponse.value = []
+                streamingAnswer.value = ''
+              }, 100)
+            }
+          }, 30) // 30ms 一个字，速度适中
+          
+          scrollToBottom()
+          break
+        case 'error':
+          console.error('❌ 错误:', data.data.error)
+          chatHistory.value.push({
+            role: 'assistant',
+            content: '❌ 错误: ' + data.data.error,
+            time: new Date().toLocaleTimeString()
+          })
+          scrollToBottom()
+          break
+      }
+      
+      scrollToBottom()
+    } catch (error) {
+      console.error('解析事件失败:', error, '原始数据:', event.data)
+    }
+  }
+
+  eventSource.onerror = (error) => {
+    console.log('SSE 连接关闭或出错')
+    if (eventSource.readyState !== EventSource.CLOSED) {
+      eventSource.close()
+    }
+    // 如果还在流式中但出错，显示错误
+    if (isStreaming.value && !streamingAnswer.value) {
+      isStreaming.value = false
+      setTimeout(() => {
+        streamingResponse.value = []
+        streamingAnswer.value = ''
+      }, 100)
+    }
+    scrollToBottom()
+  }
+
+  // 设置超时关闭
+  setTimeout(() => {
+    if (eventSource.readyState !== EventSource.CLOSED) {
+      eventSource.close()
+      isStreaming.value = false
+      setTimeout(() => {
+        streamingResponse.value = []
+        streamingAnswer.value = ''
+      }, 100)
+    }
+  }, 60000)
+}
+
 const stats = computed(() => {
   const total = chatHistory.value.length
   const responseTimes = chatHistory.value
     .filter(m => m.performance)
     .map(m => m.performance.total_ms)
-  
+
   const avgTime = responseTimes.length > 0
     ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
     : 0
-  
+
   return {
     totalMessages: total,
     avgResponseTime: avgTime
@@ -223,20 +402,20 @@ const stats = computed(() => {
 
 const sendMessage = async () => {
   if (!message.value.trim() || loading.value) return
-  
+
   const userMsg = message.value
   message.value = ''
   loading.value = true
-  
+
   // 添加用户消息
   chatHistory.value.push({
     role: 'user',
     content: userMsg,
     time: new Date().toLocaleTimeString()
   })
-  
+
   scrollToBottom()
-  
+
   try {
     const res = await smartApi.get('/chat', {
       params: {
@@ -244,7 +423,7 @@ const sendMessage = async () => {
         message: userMsg
       }
     })
-    
+
     // 添加 AI 回复
     chatHistory.value.push({
       role: 'assistant',
@@ -254,7 +433,7 @@ const sendMessage = async () => {
       capabilities: res.data.capabilities_used,
       performance: res.data.performance
     })
-    
+
     // 更新最近意图
     if (res.data.intent) {
       recentIntents.value.unshift({
@@ -265,9 +444,9 @@ const sendMessage = async () => {
         recentIntents.value.pop()
       }
     }
-    
+
     scrollToBottom()
-    
+
   } catch (error) {
     chatHistory.value.push({
       role: 'assistant',
@@ -287,7 +466,11 @@ const handleEnter = (e) => {
   }
   // Enter 发送
   e.preventDefault()
-  sendMessage()
+  if (chatMode.value === 'stream') {
+    sendStreamMessage()
+  } else {
+    sendMessage()
+  }
 }
 
 const setExample = (text) => {
@@ -328,52 +511,49 @@ onMounted(async () => {
   flex-direction: column;
 }
 
-/* 页面头部 */
+/* 极简页面头部 */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 2px solid #e9ecef;
+  padding: 0.5rem 1rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
 }
 
-.page-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin: 0;
+.header-stats {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.header-stats .stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.header-right {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.page-title .icon {
-  font-size: 3rem;
-  animation: rotate 3s linear infinite;
-}
-
-@keyframes rotate {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(15deg); }
-}
-
-.page-subtitle {
-  color: #666;
-  margin: 0.5rem 0 0 0;
-  font-size: 1rem;
+.app-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #333;
 }
 
 .status-badge {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 16px;
   background: #f8f9fa;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
@@ -383,8 +563,8 @@ onMounted(async () => {
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: #999;
 }
@@ -399,23 +579,23 @@ onMounted(async () => {
   50% { opacity: 0.5; }
 }
 
-/* 主要内容区 */
+/* 主要内容区 - 全屏对话 */
 .main-content {
-  display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 2rem;
   flex: 1;
   min-height: 0;
+  display: flex;
 }
 
-/* 对话容器 */
+/* 对话容器 - 全屏 */
 .chat-container {
+  flex: 1;
   background: white;
-  border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .messages-area {
@@ -646,6 +826,36 @@ onMounted(async () => {
   border-top: 2px solid #e9ecef;
 }
 
+.mode-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #e9ecef;
+  background: white;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.mode-btn:hover {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
 .input-container {
   display: flex;
   gap: 1rem;
@@ -706,101 +916,124 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-/* 信息面板 */
-.info-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  overflow-y: auto;
+
+/* 流式进度样式 - 极简 */
+.streaming-progress {
+  border: none !important;
+  background: white !important;
+  max-width: 100% !important;
 }
 
-.info-card {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.info-title {
-  font-size: 1rem;
-  margin: 0 0 1rem 0;
-  font-weight: 600;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.stat-item {
-  text-align: center;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 12px;
-}
-
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.stat-label {
-  font-size: 0.75rem;
+/* 极简思考过程 - 纯文本 */
+.thinking-process {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  line-height: 1.8;
   color: #666;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+}
+
+.process-line {
+  margin: 0.5rem 0;
+  padding-left: 1rem;
+  border-left: 2px solid #e9ecef;
+  animation: fadeInLeft 0.3s ease-out;
+}
+
+.process-text {
+  color: #555;
+  display: block;
+}
+
+.process-result {
+  color: #667eea;
+  display: block;
   margin-top: 0.25rem;
+  padding-left: 1rem;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
-.capability-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-.capability-item {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
+
+/* 流式答案样式 - 极简 */
+.streaming-answer {
+  margin-top: 1.5rem;
 }
 
-.cap-icon {
-  font-size: 1.5rem;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f8f9fa;
-  border-radius: 12px;
+.answer-divider {
+  color: #ddd;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
 }
 
-.cap-title {
-  font-weight: 600;
-  font-size: 0.875rem;
+.answer-text {
+  line-height: 1.7;
+  white-space: pre-wrap;
   color: #333;
+  font-size: 1rem;
 }
 
-.cap-desc {
-  font-size: 0.75rem;
-  color: #999;
+.cursor-blink {
+  display: inline-block;
+  color: #667eea;
+  animation: blink 1s infinite;
+  margin-left: 2px;
 }
 
-.intent-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
 }
 
-.intent-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border-radius: 8px;
+/* 历史消息中的思考过程 - 可折叠 */
+.message-thinking-history {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #e9ecef;
+  font-size: 0.85rem;
+}
+
+.thinking-toggle {
+  color: #667eea;
+  cursor: pointer;
+  font-weight: 500;
+  user-select: none;
+  margin-bottom: 0.5rem;
+}
+
+.thinking-toggle:hover {
+  color: #5568d3;
+}
+
+.thinking-detail-list {
+  margin-top: 0.5rem;
+  padding-left: 1.5rem;
+  color: #666;
+  line-height: 1.7;
+}
+
+.thinking-line {
+  margin: 0.4rem 0;
+}
+
+.thinking-result {
+  display: block;
+  color: #667eea;
+  padding-left: 1rem;
+  margin-top: 0.2rem;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 @keyframes slideIn {
@@ -813,4 +1046,5 @@ onMounted(async () => {
     transform: translateY(0);
   }
 }
+
 </style>

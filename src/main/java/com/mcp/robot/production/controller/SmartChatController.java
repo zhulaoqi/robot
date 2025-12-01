@@ -3,7 +3,9 @@ package com.mcp.robot.production.controller;
 import com.mcp.robot.production.service.SmartChatService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 
 import java.util.HashMap;
 import java.util.List;
@@ -126,6 +128,28 @@ public class SmartChatController {
                         "example", "curl \"http://localhost:8080/api/smart/chat?userId=user123&message=查询学生\""
                 )
         );
+    }
+
+    /**
+     * 智能对话流式接口（生产级 - 分阶段返回）
+     *
+     * 流式返回内容：
+     * 1. 意图识别阶段 - 告诉用户识别到的意图
+     * 2. 能力准备阶段 - 告诉用户启用了哪些能力
+     * 3. 执行过程阶段 - 实时返回 AI 的思考和执行过程
+     * 4. 结果返回阶段 - 返回最终结果
+     *
+     * 示例：
+     * GET /api/smart/chat/stream?userId=user123&message=查询学生成绩
+     */
+    @GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> chatStream(
+            @RequestParam(defaultValue = "default") String userId,
+            @RequestParam String message) {
+
+        log.info("[流式对话] 用户: {}, 消息: {}", userId, message);
+        // 直接返回 JSON 字符串，Spring WebFlux 会自动处理 SSE 格式
+        return smartChatService.chatStream(userId, message);
     }
 }
 
