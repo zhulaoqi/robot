@@ -1,6 +1,7 @@
 package com.mcp.robot.production.controller;
 
 import com.mcp.robot.production.service.SmartChatService;
+import com.mcp.robot.production.service.SmartChatServiceEnhanced;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -19,6 +20,7 @@ import java.util.Map;
  * 2. 智能路由 - 自动识别意图并选择能力
  * 3. 黑盒执行 - 对用户透明
  * 4. 傻瓜式使用 - 无需配置
+ * 5. 任务编排 - 像Cursor一样展示思考过程
  */
 @Slf4j
 @RestController
@@ -27,6 +29,7 @@ import java.util.Map;
 public class SmartChatController {
     
     private final SmartChatService smartChatService;
+    private final SmartChatServiceEnhanced smartChatServiceEnhanced;
     
     /**
      * 智能对话接口（生产级）
@@ -131,24 +134,49 @@ public class SmartChatController {
     }
 
     /**
-     * 智能对话流式接口（生产级 - 分阶段返回）
+     * 智能对话流式接口（生产级 - 完整任务编排，类似Cursor）
      *
-     * 流式返回内容：
-     * 1. 意图识别阶段 - 告诉用户识别到的意图
-     * 2. 能力准备阶段 - 告诉用户启用了哪些能力
-     * 3. 执行过程阶段 - 实时返回 AI 的思考和执行过程
-     * 4. 结果返回阶段 - 返回最终结果
+     * 完整的四阶段流式返回：
+     * 1. 意图理解 - 分析用户需求，展示识别结果
+     * 2. 任务规划 - 制定执行计划，展示要做哪些事情
+     * 3. 任务执行 - 逐步执行任务，实时展示进度和中间结果（包括生成的SQL）
+     * 4. 结果汇总 - 整合所有结果，给出完整答案
      *
      * 示例：
-     * GET /api/smart/chat/stream?userId=user123&message=查询学生成绩
+     * GET /api/smart/chat/stream?userId=user123&message=查询张铁牛的语文成绩
+     * 
+     * 返回的SSE事件包括：
+     * - phase_start: 阶段开始
+     * - phase_result: 阶段结果
+     * - tasks_planned: 任务计划
+     * - task_start: 任务开始
+     * - task_progress: 任务进度
+     * - sql_generated: SQL生成（SQL查询任务）
+     * - task_complete: 任务完成
+     * - sql_display: SQL展示
+     * - all_complete: 全部完成
      */
     @GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chatStream(
             @RequestParam(defaultValue = "default") String userId,
             @RequestParam String message) {
 
-        log.info("[流式对话] 用户: {}, 消息: {}", userId, message);
-        // 直接返回 JSON 字符串，Spring WebFlux 会自动处理 SSE 格式
+        log.info("📡 [流式对话-任务编排] 用户: {}, 消息: {}", userId, message);
+        // 使用增强版服务，包含完整的任务编排能力
+        return smartChatServiceEnhanced.chatStream(userId, message);
+    }
+    
+    /**
+     * 智能对话流式接口
+     * 
+     * 如果不需要任务编排，只需要简单的流式返回，可以使用这个接口
+     */
+    @GetMapping(value = "/chat/stream/simple", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> chatStreamSimple(
+            @RequestParam(defaultValue = "default") String userId,
+            @RequestParam String message) {
+
+        log.info("📡 [流式对话-简化版] 用户: {}, 消息: {}", userId, message);
         return smartChatService.chatStream(userId, message);
     }
 }
