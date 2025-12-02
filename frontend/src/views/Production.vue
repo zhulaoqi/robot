@@ -1,21 +1,6 @@
 <template>
   <div class="production-page">
-    <!-- 极简顶部栏 -->
-    <div class="page-header">
-      <div class="header-stats">
-        <span class="stat-item">💬 {{ stats.totalMessages }} 条对话</span>
-        <span class="stat-item">⚡ {{ stats.avgResponseTime }}ms 平均响应</span>
-      </div>
-      <div class="header-right">
-        <span class="app-name">AI 助手</span>
-        <div class="status-badge" :class="{ online: isOnline }">
-          <span class="status-dot"></span>
-          {{ isOnline ? '在线' : '离线' }}
-        </div>
-      </div>
-    </div>
-
-    <!-- 主要内容区 - 只有对话 -->
+    <!-- 主要内容区 - 全屏对话 -->
     <div class="main-content">
       <!-- 对话区（全屏） -->
       <div class="chat-container">
@@ -47,6 +32,12 @@
                 <span class="message-time">{{ msg.time }}</span>
               </div>
               <div class="message-content">{{ msg.content }}</div>
+
+          <!-- SQL展示（编排模式生成的SQL） -->
+          <div v-if="msg.sql" class="message-sql-block">
+            <div class="sql-header">📝 生成的 SQL</div>
+            <pre class="sql-code">{{ msg.sql }}</pre>
+          </div>
 
           <!-- 思考过程（保存在历史消息中） -->
           <div v-if="msg.thinking_steps && msg.thinking_steps.length > 0" class="message-thinking-history">
@@ -115,6 +106,12 @@
                   <span v-if="step.result" class="process-result">{{ step.result }}</span>
                 </div>
               </div>
+
+              <!-- 生成的SQL实时显示 -->
+              <div v-if="generatedSql && chatMode === 'orchestration'" class="streaming-sql">
+                <div class="sql-header">📝 生成的 SQL</div>
+                <pre class="sql-code">{{ generatedSql }}</pre>
+              </div>
               
               <!-- 流式回答 -->
               <div v-if="streamingAnswer" class="streaming-answer">
@@ -127,19 +124,36 @@
 
         <!-- 输入区 -->
         <div class="input-area">
-          <div class="mode-selector">
-            <button 
-              @click="chatMode = 'normal'" 
-              :class="['mode-btn', { active: chatMode === 'normal' }]"
-            >
-              📤 普通模式
-            </button>
-            <button 
-              @click="chatMode = 'stream'" 
-              :class="['mode-btn', { active: chatMode === 'stream' }]"
-            >
-              📡 流式模式
-            </button>
+          <!-- 顶部信息栏 -->
+          <div class="input-header">
+            <div class="mode-selector">
+              <button 
+                @click="chatMode = 'normal'" 
+                :class="['mode-btn', { active: chatMode === 'normal' }]"
+              >
+                📤 普通
+              </button>
+              <button 
+                @click="chatMode = 'stream'" 
+                :class="['mode-btn', { active: chatMode === 'stream' }]"
+              >
+                📡 流式
+              </button>
+              <button 
+                @click="chatMode = 'orchestration'" 
+                :class="['mode-btn', { active: chatMode === 'orchestration' }]"
+              >
+                🎯 编排
+              </button>
+            </div>
+            <div class="input-stats">
+              <span class="stat-tag">💬 {{ stats.totalMessages }}</span>
+              <span class="stat-tag">⚡ {{ stats.avgResponseTime }}ms</span>
+              <div class="status-badge" :class="{ online: isOnline }">
+                <span class="status-dot"></span>
+                {{ isOnline ? '在线' : '离线' }}
+              </div>
+            </div>
           </div>
           <div class="input-container">
             <textarea
@@ -151,17 +165,17 @@
               ref="inputRef"
             ></textarea>
             <button 
-              @click="chatMode === 'stream' ? sendStreamMessage() : sendMessage()" 
+              @click="handleSend()" 
               class="send-btn" 
               :disabled="loading || isStreaming || !message.trim()"
             >
               <span v-if="loading || isStreaming">⏳</span>
-              <span v-else>{{ chatMode === 'stream' ? '📡' : '📤' }}</span>
+              <span v-else>{{ getModeIcon() }}</span>
             </button>
           </div>
           <div class="input-footer">
             <span class="input-hint">
-              {{ chatMode === 'stream' ? '📡 流式模式：实时查看处理过程' : '📤 普通模式：直接返回结果' }} · Enter 发送
+              {{ getModeHint() }} · Enter 发送
             </span>
             <span class="user-id">用户: {{ userId }}</span>
           </div>
@@ -198,8 +212,11 @@ const intentLabels = {
 
 const streamingResponse = ref([])
 const isStreaming = ref(false)
-const chatMode = ref('stream') // 默认使用流式模式
+const chatMode = ref('orchestration') // 默认使用编排模式
 const streamingAnswer = ref('') // 流式答案
+const orchestrationPhases = ref([]) // 编排阶段
+const orchestrationTasks = ref([]) // 编排任务
+const generatedSql = ref('') // 生成的SQL
 
 const sendStreamMessage = async () => {
   if (!message.value.trim() || isStreaming.value) return
@@ -217,8 +234,8 @@ const sendStreamMessage = async () => {
     time: new Date().toLocaleTimeString()
   })
 
-  // 创建 EventSource 连接
-  const url = `/api/smart/chat/stream?userId=${userId.value}&message=${encodeURIComponent(userMsg)}`
+  // 创建 EventSource 连接 - 使用老的简化版接口
+  const url = `/api/smart/chat/stream/simple?userId=${userId.value}&message=${encodeURIComponent(userMsg)}`
   const eventSource = new EventSource(url)
 
   let finalAnswer = ''
@@ -236,7 +253,6 @@ const sendStreamMessage = async () => {
       }
       
       const data = JSON.parse(jsonStr)
-      streamingResponse.value.push(data)
 
       // 根据事件类型处理 - 构建结果文本
       let stepWithResult = {
@@ -248,6 +264,8 @@ const sendStreamMessage = async () => {
       switch (data.event) {
         case 'intent_start':
           console.log('🔍 开始识别意图')
+          stepWithResult.message = data.message
+          streamingResponse.value.push(stepWithResult)
           break
         case 'intent_result':
           console.log('✅ 意图识别:', data.data.intent_type)
@@ -256,7 +274,9 @@ const sendStreamMessage = async () => {
             confidence: data.data.confidence
           }
           // 添加识别结果
+          stepWithResult.message = '✅ 意图识别完成'
           stepWithResult.result = `${intentLabels[data.data.intent_type]} (置信度: ${(data.data.confidence * 100).toFixed(0)}%)`
+          streamingResponse.value.push(stepWithResult)
           break
         case 'capability_prepare':
           console.log('⚙️ 准备能力:', data.data)
@@ -265,18 +285,23 @@ const sendStreamMessage = async () => {
           if (data.data.knowledge) caps.push('知识库')
           if (data.data.tools) caps.push('工具')
           if (data.data.memory) caps.push('记忆')
+          stepWithResult.message = '⚙️ 准备执行能力'
           if (caps.length > 0) {
             stepWithResult.result = `[${caps.join(', ')}]`
           }
+          streamingResponse.value.push(stepWithResult)
           break
         case 'execution_start':
           console.log('🚀 开始执行')
+          stepWithResult.message = '🚀 开始执行任务'
           if (data.data.mode) {
             stepWithResult.result = `模式: ${data.data.mode}`
           }
+          streamingResponse.value.push(stepWithResult)
           break
         case 'execution_step':
           console.log('▶️ 执行步骤:', data.message)
+          stepWithResult.message = data.message
           // 如果有SQL或其他结果，显示出来
           if (data.data.sql) {
             stepWithResult.result = `\nSQL: ${data.data.sql}`
@@ -287,6 +312,7 @@ const sendStreamMessage = async () => {
           if (data.data.result) {
             stepWithResult.result = `\n${data.data.result}`
           }
+          streamingResponse.value.push(stepWithResult)
           break
         case 'final_result':
           finalAnswer = data.data.answer
@@ -384,6 +410,265 @@ const sendStreamMessage = async () => {
   }, 60000)
 }
 
+const sendOrchestrationMessage = async () => {
+  if (!message.value.trim() || isStreaming.value) return
+
+  const userMsg = message.value
+  message.value = ''
+  isStreaming.value = true
+  streamingResponse.value = []
+  streamingAnswer.value = ''
+  orchestrationPhases.value = []
+  orchestrationTasks.value = []
+  generatedSql.value = ''
+
+  // 添加用户消息
+  chatHistory.value.push({
+    role: 'user',
+    content: userMsg,
+    time: new Date().toLocaleTimeString()
+  })
+
+  // 创建 EventSource 连接
+  const url = `/api/smart/chat/stream?userId=${userId.value}&message=${encodeURIComponent(userMsg)}`
+  const eventSource = new EventSource(url)
+
+  let finalAnswer = ''
+  let intentInfo = null
+  let performanceInfo = null
+  let allThinkingSteps = []
+
+  eventSource.onmessage = (event) => {
+    try {
+      let jsonStr = event.data
+      if (jsonStr.startsWith('data: ')) {
+        jsonStr = jsonStr.substring(6)
+      }
+      
+      const data = JSON.parse(jsonStr)
+      console.log('📡 收到编排事件:', data.event, data)
+
+      let stepMessage = {
+        message: data.message,
+        event: data.event,
+        result: null
+      }
+
+      switch (data.event) {
+        case 'phase_start':
+          stepMessage.message = `${data.message} ${data.data.description}`
+          streamingResponse.value.push(stepMessage)
+          orchestrationPhases.value.push({
+            phase: data.data.phase,
+            name: data.message,
+            status: 'running'
+          })
+          break
+
+        case 'phase_result':
+          if (data.data.phase === 1) {
+            // 意图理解结果
+            intentInfo = {
+              type: data.data.intent_type,
+              confidence: data.data.confidence
+            }
+            stepMessage.result = `${intentLabels[data.data.intent_type]} (${(data.data.confidence * 100).toFixed(0)}%)`
+            allThinkingSteps.push({
+              message: '✅ 意图识别',
+              result: `${intentLabels[data.data.intent_type]} · 置信度 ${(data.data.confidence * 100).toFixed(0)}%`
+            })
+          } else if (data.data.phase === 2) {
+            // 任务规划完成
+            allThinkingSteps.push({
+              message: '✅ 任务规划',
+              result: `共 ${data.data.total_tasks} 个任务`
+            })
+          }
+          streamingResponse.value.push(stepMessage)
+          break
+
+        case 'tasks_planned':
+          // 显示任务列表
+          orchestrationTasks.value = data.data.tasks
+          stepMessage.message = '📋 执行计划'
+          stepMessage.result = data.data.tasks.map((t, i) => 
+            `${i + 1}. ${t.description}`
+          ).join('\n')
+          streamingResponse.value.push(stepMessage)
+          
+          // 添加到思考步骤
+          data.data.tasks.forEach((task, index) => {
+            allThinkingSteps.push({
+              message: `任务${index + 1}: ${task.description}`,
+              result: ''
+            })
+          })
+          break
+
+        case 'task_start':
+          stepMessage.message = `⚙️ ${data.data.description}`
+          streamingResponse.value.push(stepMessage)
+          
+          // 更新任务状态
+          const startTask = orchestrationTasks.value.find(t => t.task_id === data.data.task_id)
+          if (startTask) {
+            startTask.status = 'running'
+          }
+          break
+
+        case 'task_progress':
+          stepMessage.message = `  ${data.data.progress}`
+          streamingResponse.value.push(stepMessage)
+          break
+
+        case 'sql_generated':
+          // 🎯 重点：显示生成的SQL
+          generatedSql.value = data.data.sql
+          stepMessage.message = '📝 生成的 SQL'
+          stepMessage.result = `\n${data.data.sql}`
+          streamingResponse.value.push(stepMessage)
+          
+          allThinkingSteps.push({
+            message: '📝 SQL查询语句',
+            result: data.data.sql
+          })
+          break
+
+        case 'task_complete':
+          stepMessage.message = `✅ ${data.message}`
+          streamingResponse.value.push(stepMessage)
+          
+          // 更新任务状态
+          const completeTask = orchestrationTasks.value.find(t => t.task_id === data.data.task_id)
+          if (completeTask) {
+            completeTask.status = 'completed'
+          }
+          break
+
+        case 'task_failed':
+          stepMessage.message = `❌ ${data.message}`
+          stepMessage.result = data.data.error
+          streamingResponse.value.push(stepMessage)
+          
+          // 更新任务状态
+          const failedTask = orchestrationTasks.value.find(t => t.task_id === data.data.task_id)
+          if (failedTask) {
+            failedTask.status = 'failed'
+          }
+          break
+
+        case 'sql_display':
+          // 额外的SQL展示（如果需要）
+          if (!generatedSql.value) {
+            generatedSql.value = data.data.sql
+          }
+          break
+
+        case 'all_complete':
+          finalAnswer = data.data.final_answer
+          performanceInfo = data.data.performance
+          
+          // 逐字显示效果
+          streamingAnswer.value = ''
+          let charIndex = 0
+          const typeInterval = setInterval(() => {
+            if (charIndex < finalAnswer.length) {
+              streamingAnswer.value += finalAnswer[charIndex]
+              charIndex++
+              scrollToBottom()
+            } else {
+              clearInterval(typeInterval)
+              
+              // 添加到历史记录
+              chatHistory.value.push({
+                role: 'assistant',
+                content: finalAnswer,
+                time: new Date().toLocaleTimeString(),
+                streaming: true,
+                orchestration: true,
+                intent: intentInfo,
+                performance: performanceInfo,
+                thinking_steps: allThinkingSteps,
+                sql: generatedSql.value,
+                showThinking: false
+              })
+              
+              // 更新最近意图
+              if (intentInfo) {
+                recentIntents.value.unshift(intentInfo)
+                if (recentIntents.value.length > 5) {
+                  recentIntents.value.pop()
+                }
+              }
+              
+              eventSource.close()
+              isStreaming.value = false
+              
+              setTimeout(() => {
+                streamingResponse.value = []
+                streamingAnswer.value = ''
+                orchestrationPhases.value = []
+                orchestrationTasks.value = []
+                generatedSql.value = ''
+              }, 100)
+            }
+          }, 30)
+          
+          scrollToBottom()
+          break
+
+        case 'error':
+          console.error('❌ 错误:', data.data.error)
+          chatHistory.value.push({
+            role: 'assistant',
+            content: '❌ 错误: ' + data.data.error,
+            time: new Date().toLocaleTimeString()
+          })
+          eventSource.close()
+          isStreaming.value = false
+          scrollToBottom()
+          break
+      }
+
+      scrollToBottom()
+    } catch (error) {
+      console.error('解析事件失败:', error, '原始数据:', event.data)
+    }
+  }
+
+  eventSource.onerror = (error) => {
+    console.log('SSE 连接关闭或出错')
+    if (eventSource.readyState !== EventSource.CLOSED) {
+      eventSource.close()
+    }
+    if (isStreaming.value && !streamingAnswer.value) {
+      isStreaming.value = false
+      setTimeout(() => {
+        streamingResponse.value = []
+        streamingAnswer.value = ''
+        orchestrationPhases.value = []
+        orchestrationTasks.value = []
+        generatedSql.value = ''
+      }, 100)
+    }
+    scrollToBottom()
+  }
+
+  setTimeout(() => {
+    if (eventSource.readyState !== EventSource.CLOSED) {
+      eventSource.close()
+      isStreaming.value = false
+      setTimeout(() => {
+        streamingResponse.value = []
+        streamingAnswer.value = ''
+        orchestrationPhases.value = []
+        orchestrationTasks.value = []
+        generatedSql.value = ''
+      }, 100)
+    }
+  }, 60000)
+}
+
 const stats = computed(() => {
   const total = chatHistory.value.length
   const responseTimes = chatHistory.value
@@ -459,6 +744,28 @@ const sendMessage = async () => {
   }
 }
 
+const handleSend = () => {
+  if (chatMode.value === 'orchestration') {
+    sendOrchestrationMessage()
+  } else if (chatMode.value === 'stream') {
+    sendStreamMessage()
+  } else {
+    sendMessage()
+  }
+}
+
+const getModeIcon = () => {
+  if (chatMode.value === 'orchestration') return '🎯'
+  if (chatMode.value === 'stream') return '📡'
+  return '📤'
+}
+
+const getModeHint = () => {
+  if (chatMode.value === 'orchestration') return '🎯 编排模式：完整展示AI思考和执行计划'
+  if (chatMode.value === 'stream') return '📡 流式模式：实时查看处理过程'
+  return '📤 普通模式：直接返回结果'
+}
+
 const handleEnter = (e) => {
   if (e.shiftKey) {
     // Shift+Enter 换行
@@ -466,11 +773,7 @@ const handleEnter = (e) => {
   }
   // Enter 发送
   e.preventDefault()
-  if (chatMode.value === 'stream') {
-    sendStreamMessage()
-  } else {
-    sendMessage()
-  }
+  handleSend()
 }
 
 const setExample = (text) => {
@@ -503,80 +806,11 @@ onMounted(async () => {
 
 <style scoped>
 .production-page {
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 2rem;
-  height: calc(100vh - 120px);
+  width: 100%;
+  height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
-}
-
-/* 极简页面头部 */
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.header-stats {
-  display: flex;
-  gap: 1.5rem;
-  font-size: 0.8rem;
-  color: #666;
-}
-
-.header-stats .stat-item {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.app-name {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.status-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.75rem;
-  border-radius: 16px;
-  background: #f8f9fa;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.status-badge.online {
-  background: #d4edda;
-  color: #155724;
-}
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #999;
-}
-
-.status-badge.online .status-dot {
-  background: #28a745;
-  animation: pulse-dot 2s infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  background: #fafafa;
 }
 
 /* 主要内容区 - 全屏对话 */
@@ -584,6 +818,9 @@ onMounted(async () => {
   flex: 1;
   min-height: 0;
   display: flex;
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 /* 对话容器 - 全屏 */
@@ -593,64 +830,66 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  max-width: 1400px;
-  margin: 0 auto;
   width: 100%;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+  border-radius: 0;
 }
 
 .messages-area {
   flex: 1;
   overflow-y: auto;
-  padding: 2rem;
+  padding: 1.5rem;
   scroll-behavior: smooth;
+  background: #fafafa;
 }
 
 /* 空状态 */
 .empty-state {
   text-align: center;
-  padding: 4rem 2rem;
+  padding: 3rem 2rem;
 }
 
 .empty-icon {
-  font-size: 5rem;
-  margin-bottom: 1rem;
+  font-size: 4rem;
+  margin-bottom: 0.75rem;
   opacity: 0.5;
 }
 
 .empty-state h3 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+  margin-bottom: 0.4rem;
   color: #333;
 }
 
 .empty-state p {
   color: #666;
-  margin-bottom: 2rem;
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
 }
 
 .example-questions {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
   max-width: 500px;
   margin: 0 auto;
 }
 
 .example-label {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: #999;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .example-btn {
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   background: #f8f9fa;
-  border: 2px solid #e9ecef;
-  border-radius: 12px;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s;
   text-align: left;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
 }
 
 .example-btn:hover {
@@ -661,7 +900,7 @@ onMounted(async () => {
 
 /* 消息气泡 */
 .message-wrapper {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   display: flex;
   animation: slideIn 0.3s;
 }
@@ -671,10 +910,11 @@ onMounted(async () => {
 }
 
 .message-bubble {
-  max-width: 70%;
-  padding: 1rem 1.5rem;
-  border-radius: 16px;
+  max-width: 75%;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
   background: #f8f9fa;
+  font-size: 0.875rem;
 }
 
 .message-wrapper.user .message-bubble {
@@ -690,13 +930,13 @@ onMounted(async () => {
 .message-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.875rem;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
 }
 
 .message-avatar {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
 }
 
 .message-role {
@@ -710,16 +950,17 @@ onMounted(async () => {
 }
 
 .message-content {
-  line-height: 1.6;
+  line-height: 1.5;
   white-space: pre-wrap;
+  font-size: 0.875rem;
 }
 
 .message-intent {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
@@ -728,9 +969,9 @@ onMounted(async () => {
 }
 
 .intent-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
   font-weight: 600;
 }
 
@@ -755,21 +996,21 @@ onMounted(async () => {
 }
 
 .intent-confidence {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   opacity: 0.6;
 }
 
 .message-capabilities {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
   flex-wrap: wrap;
 }
 
 .capability-tag {
-  padding: 0.25rem 0.5rem;
-  border-radius: 8px;
-  font-size: 0.7rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.65rem;
   background: rgba(255, 255, 255, 0.2);
 }
 
@@ -779,9 +1020,9 @@ onMounted(async () => {
 
 .message-performance {
   display: flex;
-  gap: 1rem;
-  margin-top: 0.5rem;
-  font-size: 0.7rem;
+  gap: 0.75rem;
+  margin-top: 0.4rem;
+  font-size: 0.65rem;
   opacity: 0.6;
 }
 
@@ -821,27 +1062,85 @@ onMounted(async () => {
 
 /* 输入区 */
 .input-area {
-  padding: 1.5rem;
+  padding: 1rem 1.5rem;
+  background: #ffffff;
+  border-top: 1px solid #e9ecef;
+  box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* 输入区头部 */
+.input-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  gap: 1rem;
+}
+
+.input-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stat-tag {
+  font-size: 0.7rem;
+  color: #666;
+  padding: 0.25rem 0.5rem;
   background: #f8f9fa;
-  border-top: 2px solid #e9ecef;
+  border-radius: 6px;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 10px;
+  background: #f8f9fa;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.status-badge.online {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #999;
+}
+
+.status-badge.online .status-dot {
+  background: #28a745;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .mode-selector {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 1rem;
 }
 
 .mode-btn {
   flex: 1;
-  padding: 0.75rem;
-  border: 2px solid #e9ecef;
+  padding: 0.5rem 0.5rem;
+  border: 1px solid #e0e0e0;
   background: white;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s;
-  font-size: 0.875rem;
+  transition: all 0.2s;
+  font-size: 0.75rem;
   font-weight: 500;
+  white-space: nowrap;
+  color: #666;
 }
 
 .mode-btn:hover {
@@ -864,14 +1163,14 @@ onMounted(async () => {
 
 .message-input {
   flex: 1;
-  padding: 1rem;
-  border: 2px solid #e9ecef;
-  border-radius: 16px;
-  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 0.875rem;
   resize: none;
   font-family: inherit;
   transition: all 0.3s;
-  max-height: 120px;
+  max-height: 100px;
 }
 
 .message-input:focus {
@@ -881,13 +1180,13 @@ onMounted(async () => {
 }
 
 .send-btn {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   border: none;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   cursor: pointer;
   transition: all 0.3s;
   flex-shrink: 0;
@@ -907,8 +1206,8 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 0.75rem;
-  font-size: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.7rem;
   color: #999;
 }
 
@@ -926,16 +1225,16 @@ onMounted(async () => {
 
 /* 极简思考过程 - 纯文本 */
 .thinking-process {
-  margin-top: 1rem;
-  font-size: 0.85rem;
-  line-height: 1.8;
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.6;
   color: #666;
   font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
 }
 
 .process-line {
-  margin: 0.5rem 0;
-  padding-left: 1rem;
+  margin: 0.4rem 0;
+  padding-left: 0.75rem;
   border-left: 2px solid #e9ecef;
   animation: fadeInLeft 0.3s ease-out;
 }
@@ -966,6 +1265,12 @@ onMounted(async () => {
 }
 
 
+/* 流式SQL显示 */
+.streaming-sql {
+  margin-top: 1.5rem;
+  animation: fadeInLeft 0.3s ease-out;
+}
+
 /* 流式答案样式 - 极简 */
 .streaming-answer {
   margin-top: 1.5rem;
@@ -978,10 +1283,10 @@ onMounted(async () => {
 }
 
 .answer-text {
-  line-height: 1.7;
+  line-height: 1.6;
   white-space: pre-wrap;
   color: #333;
-  font-size: 1rem;
+  font-size: 0.875rem;
 }
 
 .cursor-blink {
@@ -996,12 +1301,40 @@ onMounted(async () => {
   50%, 100% { opacity: 0; }
 }
 
-/* 历史消息中的思考过程 - 可折叠 */
-.message-thinking-history {
-  margin-top: 1rem;
+/* SQL代码块样式 */
+.message-sql-block {
+  margin-top: 0.75rem;
   padding-top: 0.75rem;
   border-top: 1px dashed #e9ecef;
-  font-size: 0.85rem;
+}
+
+.sql-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #667eea;
+  margin-bottom: 0.4rem;
+}
+
+.sql-code {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
+  font-size: 0.75rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* 历史消息中的思考过程 - 可折叠 */
+.message-thinking-history {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #e9ecef;
+  font-size: 0.75rem;
 }
 
 .thinking-toggle {
@@ -1044,6 +1377,28 @@ onMounted(async () => {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .input-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .mode-selector {
+    width: 100%;
+  }
+  
+  .input-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .message-bubble {
+    max-width: 85%;
   }
 }
 
