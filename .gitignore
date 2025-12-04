@@ -34,3 +34,24 @@ logs/
 
 # Spring Boot
 HELP.md
+
+# 前端相关
+# Node.js
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/.cache/
+
+# 前端环境变量
+frontend/.env.local
+frontend/.env.*.local
+
+# 前端测试覆盖率
+frontend/coverage/
+
+# 前端临时文件
+frontend/.eslintcache
+
+# 静态资源构建产物（已构建的前端资源，根据需求选择是否忽略）
+src/main/resources/static/assets/
