@@ -5,7 +5,10 @@ import com.mcp.robot.production.service.SmartChatServiceEnhanced;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 
 import java.util.HashMap;
@@ -14,7 +17,7 @@ import java.util.Map;
 
 /**
  * 智能对话控制器（生产级）
- * 
+ * <p>
  * 特点：
  * 1. 完全自动化 - 用户只需输入问题
  * 2. 智能路由 - 自动识别意图并选择能力
@@ -27,23 +30,23 @@ import java.util.Map;
 @RequestMapping("/api/smart")
 @RequiredArgsConstructor
 public class SmartChatController {
-    
+
     private final SmartChatService smartChatService;
     private final SmartChatServiceEnhanced smartChatServiceEnhanced;
-    
+
     /**
      * 智能对话接口（生产级）
-     * 
+     * <p>
      * 用户只需要：
      * 1. 输入问题
      * 2. 得到答案
-     * 
+     * <p>
      * 系统自动：
      * 1. 识别意图（SQL查询？知识问答？工具调用？）
      * 2. 选择能力（知识库？工具？记忆？）
      * 3. 执行任务（检索DDL？调用工具？）
      * 4. 返回结果
-     * 
+     * <p>
      * 示例：
      * GET /api/smart/chat?userId=user123&message=查询所有在读学生
      * GET /api/smart/chat?userId=user123&message=深圳今天天气怎么样
@@ -54,11 +57,11 @@ public class SmartChatController {
     public Map<String, Object> chat(
             @RequestParam(defaultValue = "default") String userId,
             @RequestParam String message) {
-        
+
         log.info("🚀 [智能对话] 收到请求");
         return smartChatService.chat(userId, message);
     }
-    
+
     /**
      * 健康检查
      */
@@ -76,7 +79,7 @@ public class SmartChatController {
         ));
         return health;
     }
-    
+
     /**
      * 测试接口 - 展示系统能力
      */
@@ -135,16 +138,16 @@ public class SmartChatController {
 
     /**
      * 智能对话流式接口（生产级 - 完整任务编排，类似Cursor）
-     *
+     * <p>
      * 完整的四阶段流式返回：
      * 1. 意图理解 - 分析用户需求，展示识别结果
      * 2. 任务规划 - 制定执行计划，展示要做哪些事情
      * 3. 任务执行 - 逐步执行任务，实时展示进度和中间结果（包括生成的SQL）
      * 4. 结果汇总 - 整合所有结果，给出完整答案
-     *
+     * <p>
      * 示例：
      * GET /api/smart/chat/stream?userId=user123&message=查询张铁牛的语文成绩
-     * 
+     * <p>
      * 返回的SSE事件包括：
      * - phase_start: 阶段开始
      * - phase_result: 阶段结果
@@ -165,10 +168,10 @@ public class SmartChatController {
         // 使用增强版服务，包含完整的任务编排能力
         return smartChatServiceEnhanced.chatStream(userId, message);
     }
-    
+
     /**
      * 智能对话流式接口
-     * 
+     * <p>
      * 如果不需要任务编排，只需要简单的流式返回，可以使用这个接口
      */
     @GetMapping(value = "/chat/stream/simple", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
