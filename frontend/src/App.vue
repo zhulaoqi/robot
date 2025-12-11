@@ -8,6 +8,7 @@
       <div class="nav-menu">
         <router-link to="/" class="nav-item">🏠 首页</router-link>
         <router-link to="/production" class="nav-item production-nav">🚀 生产级</router-link>
+        <router-link to="/orchestration" class="nav-item orchestration-nav">⚡ 任务编排</router-link>
         <div class="nav-divider"></div>
         <router-link to="/unified" class="nav-item">🎯 统一对话</router-link>
         <router-link to="/chat" class="nav-item">💬 对话</router-link>
@@ -93,6 +94,7 @@
 
 .production-nav {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+  color: white !important;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(240, 147, 251, 0.3);
 }
@@ -100,6 +102,18 @@
 .production-nav:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
+}
+
+.orchestration-nav {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important;
+  color: white !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(250, 112, 154, 0.3);
+}
+
+.orchestration-nav:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(250, 112, 154, 0.4);
 }
 
 .main-content {

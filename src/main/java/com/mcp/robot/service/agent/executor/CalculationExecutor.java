@@ -25,8 +25,28 @@ public class CalculationExecutor implements TaskExecutor {
         log.info("🧮 [CalculationExecutor] 执行数学计算: {}", taskDescription);
         
         try {
+            // ✅ 从 context 中获取前置任务的结果
+            StringBuilder contextData = new StringBuilder();
+            
+            for (Map.Entry<String, Object> entry : context.entrySet()) {
+                String key = entry.getKey();
+                Object value = entry.getValue();
+                
+                if (key.equals("memory_id") || key.equals("dag_id")) {
+                    continue;
+                }
+                
+                if (key.startsWith("task-") && value != null) {
+                    contextData.append(String.format("\n【前置数据】\n%s\n", value));
+                }
+            }
+            
+            String fullRequest = contextData.length() > 0 
+                ? String.format("基于以下数据：%s\n\n计算任务：%s", contextData, taskDescription)
+                : "计算：" + taskDescription;
+            
             // AgentService 会自动调用 calculate 工具
-            String result = agentService.generalAssist("calculation-session", "计算：" + taskDescription);
+            String result = agentService.generalAssist("calculation-session", fullRequest);
             log.info("✅ [CalculationExecutor] 计算完成");
             return result;
         } catch (Exception e) {
